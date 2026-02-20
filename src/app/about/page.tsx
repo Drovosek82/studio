@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -20,7 +21,8 @@ import {
   MousePointer2,
   CreditCard,
   CheckCircle2,
-  Github
+  Github,
+  Info
 } from "lucide-react";
 
 export default function AboutPage() {
@@ -78,21 +80,37 @@ export default function AboutPage() {
           </p>
         </section>
 
-        {/* Спеціальний розділ для завантаження на GitHub з телефону */}
+        {/* НОВА ІНСТРУКЦІЯ ДЛЯ ТЕЛЕФОНУ */}
         <section className="p-8 bg-purple-500/10 rounded-2xl border border-purple-500/20 space-y-6">
-          <h3 className="text-xl font-bold flex items-center gap-2">
-            <Github className="h-5 w-5 text-purple-500" />
-            Як завантажити код на GitHub (з телефону)
-          </h3>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Ви бачите це повідомлення, тому що ваш проект ще не на GitHub. Щоб отримати постійне посилання:
-          </p>
-          <div className="bg-background/50 p-4 rounded-lg border border-border/50 space-y-3">
-            <p className="text-xs font-bold text-accent">КРОК 1: Знайдіть кнопку GitHub</p>
-            <p className="text-xs">У цьому редакторі (Firebase Studio) подивіться на саму верхню синю або сіру панель інструментів. Там є кнопка з іконкою GitHub.</p>
+          <div className="flex items-center gap-3">
+             <Github className="h-8 w-8 text-purple-500" />
+             <h3 className="text-2xl font-bold">Де кнопка GitHub на телефоні?</h3>
+          </div>
+          
+          <div className="space-y-4 text-sm leading-relaxed">
+            <p>Ваш GitHub зараз порожній, тому Firebase видає помилку. Щоб автоматично відправити туди всі файли:</p>
             
-            <p className="text-xs font-bold text-accent">КРОК 2: Підключіть репозиторій</p>
-            <p className="text-xs">Натисніть на неї та виберіть свій порожній репозиторій. Всі файли (50+) завантажаться автоматично за кілька секунд.</p>
+            <div className="bg-background/80 p-5 rounded-xl border border-purple-500/30 space-y-4">
+              <div className="flex gap-4">
+                <div className="h-6 w-6 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">1</div>
+                <p>Натисніть на іконку <b>меню (три лінії)</b> у самому верхньому куті вікна редактора (не додатка, а саме середовища розробки).</p>
+              </div>
+              
+              <div className="flex gap-4">
+                <div className="h-6 w-6 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">2</div>
+                <p>Шукайте вкладку <b>"Project"</b> або <b>"Deploy"</b>. Там має бути іконка з котиком (GitHub).</p>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="h-6 w-6 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">3</div>
+                <p>Натисніть <b>"Connect to GitHub"</b> або <b>"Push"</b>. Виберіть свій репозиторій. Це завантажить усі 50+ файлів автоматично за 5 секунд!</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 text-[10px] text-muted-foreground italic bg-secondary/20 p-3 rounded-lg">
+              <Info className="h-3 w-3 shrink-0" />
+              Коли на GitHub з'являться файли (package.json та інші), помилка "No buildpack groups passed detection" у Firebase зникне сама собою.
+            </div>
           </div>
         </section>
 
@@ -114,9 +132,6 @@ export default function AboutPage() {
               <span className="text-xs">{t('aboutPriceLimit2')}</span>
             </div>
           </div>
-          <p className="text-[10px] text-muted-foreground italic">
-            {t('aboutPriceNote')}
-          </p>
         </section>
 
         <section className="p-8 bg-blue-500/10 rounded-2xl border border-blue-500/20 space-y-6">
@@ -124,9 +139,6 @@ export default function AboutPage() {
             <Share2 className="h-5 w-5 text-blue-500" />
             {t('aboutShareMobileTitle')}
           </h3>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {t('aboutShareMobileDesc')}
-          </p>
           <div className="space-y-4">
             <div className="flex gap-4 items-start">
               <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">1</div>
@@ -183,24 +195,6 @@ export default function AboutPage() {
             </Card>
           ))}
         </div>
-
-        <section className="p-8 bg-secondary/20 rounded-2xl border border-border/50 space-y-6">
-          <h3 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="h-6 w-6 text-blue-400" />
-            {t('intelligence')} & Community
-          </h3>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            {t('aboutCommunityDesc')}
-          </p>
-          <div className="flex flex-wrap gap-4 pt-4">
-            <div className="flex items-center gap-2 px-4 py-2 bg-background/50 rounded-full border border-border text-xs">
-              <ShieldCheck className="h-3 w-3 text-green-500" /> Private Telemetry
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-background/50 rounded-full border border-border text-xs">
-              <DatabaseIcon className="h-3 w-3 text-blue-500" /> Shared Insights
-            </div>
-          </div>
-        </section>
 
         <div className="flex justify-center">
           <Link href="/">
