@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, Cpu, Wifi, Shield, Code, Loader2, Globe, User, Bluetooth, Layers, Monitor, Radio } from "lucide-react";
+import { Download, Cpu, Wifi, Shield, Code, Loader2, Globe, User, Bluetooth, Layers, Monitor, Radio, Tv } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import { useUser } from "@/firebase";
 export function FirmwareWizard() {
   const { user } = useUser();
   const [mode, setMode] = useState<'bridge' | 'display'>('bridge');
+  const [displayType, setDisplayType] = useState<string>("none");
   const [ssid, setSsid] = useState("");
   const [password, setPassword] = useState("");
   const [deviceId, setDeviceId] = useState("");
@@ -56,6 +57,7 @@ export function FirmwareWizard() {
 
       const result = await generateEsp32Firmware({ 
         mode,
+        displayType: displayType as any,
         ssid, 
         password, 
         deviceId,
@@ -66,7 +68,7 @@ export function FirmwareWizard() {
       setFirmware(result.firmwareContent);
       toast({
         title: "Прошивку створено",
-        description: `Режим: ${mode === 'bridge' ? 'Міст' : 'Екран'}. Оптимізовано для ${espModel.toUpperCase()}.`,
+        description: `Режим: ${mode === 'bridge' ? 'Міст' : 'Екран'}. Дисплей: ${displayType.toUpperCase()}.`,
       });
     } catch (error) {
       toast({
@@ -129,6 +131,25 @@ export function FirmwareWizard() {
             </Select>
           </div>
 
+          {mode === 'display' && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Tv className="h-4 w-4" /> Тип дисплея
+              </Label>
+              <Select value={displayType} onValueChange={setDisplayType}>
+                <SelectTrigger className="bg-secondary/50 border-none">
+                  <SelectValue placeholder="Оберіть дисплей" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Тільки Serial (Без екрана)</SelectItem>
+                  <SelectItem value="ssd1306">OLED 0.96" (SSD1306)</SelectItem>
+                  <SelectItem value="sh1106">OLED 1.3" (SH1106)</SelectItem>
+                  <SelectItem value="lcd1602">LCD 1602 (I2C)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {mode === 'bridge' && (
             <div className="space-y-2">
               <Label htmlFor="bmsName" className="flex items-center gap-2">
@@ -180,7 +201,7 @@ export function FirmwareWizard() {
           <p className="text-[10px] text-muted-foreground leading-relaxed">
             {mode === 'bridge' 
               ? "Пристрій з'єднається з BMS по Bluetooth і відправлятиме дані в хмару кожні 10 секунд. Оптимізовано для обраної моделі чіпа."
-              : "Пристрій буде отримувати агреговані дані (Напруга, Потужність, SOC) всієї системи через Wi-Fi та виводити їх на OLED-дисплей SSD1306."}
+              : `Пристрій буде отримувати агреговані дані всієї системи через Wi-Fi та виводити їх на ${displayType === 'none' ? 'Serial порт' : 'обраний дисплей'}.`}
           </p>
         </div>
       </CardContent>
