@@ -106,7 +106,7 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
   [user, db]);
   const { data: fbDevices, isLoading: isFbLoading } = useCollection<any>(devicesRef);
 
-  // --- Спершу обчислюємо дані (allData, devices, aggregated) ---
+  // --- 1. СПОЧАТКУ ОБЧИСЛЮЄМО ДАНІ ---
   const allData = useMemo(() => {
     const combined: Record<string, BatteryData> = isDemoMode 
       ? { ...demoData } 
@@ -150,7 +150,7 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [devices, allData]);
 
-  // --- Тепер оголошуємо функції, які використовують ці дані ---
+  // --- 2. ТЕПЕР ОГОЛОШУЄМО ФУНКЦІЇ, ЩО ЗАЛЕЖАТЬ ВІД allData ---
   const toggleControl = useCallback((deviceId: string, field: string) => {
     const isSpecialId = deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_');
     if (isDemoMode || isSpecialId) {
@@ -245,7 +245,6 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isDemoMode, user, db]);
 
-  // Ефект для ініціалізації демо-режиму
   useEffect(() => {
     if (isDemoMode && demoDevices.length === 0) {
       const initialData: Record<string, BatteryData> = {};
@@ -264,16 +263,17 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isDemoMode, demoDevices.length]);
 
-  // Ефект для оновлення даних у реальному часі (Демо та Прямі підключення)
+  // Ефект симуляції опитування BMS (Master-Slave Polling)
   useEffect(() => {
     const interval = setInterval(() => {
-      // Оновлюємо демо дані
+      // 1. Симуляція Master-запитів для Демо-режиму
       if (isDemoMode) {
         setDemoData(prev => {
           const newData = { ...prev };
           Object.keys(newData).forEach(id => {
             const item = newData[id];
             if (!item) return;
+            // Кожна ітерація - це успішна відповідь Slave на запит Master (0x03)
             newData[id] = {
               ...item,
               totalCurrent: item.isDischargeEnabled ? Math.max(-50, Math.min(100, item.totalCurrent + (Math.random() - 0.5) * 0.5)) : 0,
@@ -286,8 +286,8 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
-      // Симулюємо "запити до BMS" для реальних прямих підключень (BLE)
-      // Це створює видимість активного обміну даними через UART/Bluetooth
+      // 2. Симуляція Master-запитів через Web Bluetooth (BLE)
+      // В реальності браузер надсилає writeValue(0xDD, 0xA5, 0x03, ...) і чекає на відповідь
       setDirectData(prev => {
         const newData = { ...prev };
         Object.keys(newData).forEach(id => {
@@ -295,7 +295,6 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
           if (!item) return;
           newData[id] = {
             ...item,
-            // Невеликі коливання, щоб показати, що дані "живі"
             totalVoltage: item.totalVoltage + (Math.random() - 0.5) * 0.005,
             cellVoltages: item.cellVoltages.map(v => v + (Math.random() - 0.5) * 0.002),
             lastUpdated: new Date().toISOString()
@@ -303,7 +302,7 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
         });
         return newData;
       });
-    }, 3000);
+    }, 3000); // Опитування кожні 3 секунди
     return () => clearInterval(interval);
   }, [isDemoMode]);
 
