@@ -15,7 +15,8 @@ import {
   Globe,
   Database,
   Users,
-  Share2
+  Share2,
+  ExternalLink
 } from "lucide-react";
 
 export default function AboutPage() {
@@ -73,6 +74,29 @@ export default function AboutPage() {
           </p>
         </section>
 
+        <section className="p-8 bg-blue-500/10 rounded-2xl border border-blue-500/20 space-y-4">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <Share2 className="h-5 w-5 text-blue-500" />
+            Як поділитися з телефону?
+          </h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Це посилання, яке ви бачите зараз — приватне. Щоб поділитися робочим додатком:
+          </p>
+          <ol className="text-sm space-y-3 list-decimal pl-4 text-muted-foreground">
+            <li>Зайдіть у <b>Firebase Console</b> у вашому мобільному браузері.</li>
+            <li>Виберіть розділ <b>App Hosting</b> та підключіть ваш GitHub репозиторій.</li>
+            <li>Після завершення ви отримаєте посилання виду <code>your-app.web.app</code>.</li>
+            <li>Просто скопіюйте його та надішліть друзям!</li>
+          </ol>
+          <div className="pt-2">
+            <Button variant="outline" className="w-full gap-2 border-blue-500/30 text-blue-400" asChild>
+              <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">
+                Відкрити Firebase Console <ExternalLink className="h-3 w-3" />
+              </a>
+            </Button>
+          </div>
+        </section>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {features.map((f, i) => (
             <Card key={i} className="glass-card border-none hover:ring-1 hover:ring-accent/30 transition-all p-2">
@@ -97,7 +121,7 @@ export default function AboutPage() {
             {t('intelligence')} & Community
           </h3>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Важливо розуміти, як працює спільний доступ: ваші дані про батареї є <b>абсолютно приватними</b>. Але технічні знання, які ШІ здобуває під час ваших підключень, стають частиною <b>глобальної бази знань</b>. Це дозволяє спільноті швидше адаптувати нові моделі BMS.
+            Важливо розуміти: ваші дані про батареї є <b>абсолютно приватними</b>. Але технічні знання про моделі BMS стають частиною <b>глобальної бази знань</b>. Це дозволяє всій спільноті швидше адаптувати нові пристрої.
           </p>
           <div className="flex flex-wrap gap-4 pt-4">
             <div className="flex items-center gap-2 px-4 py-2 bg-background/50 rounded-full border border-border text-xs">
@@ -106,20 +130,7 @@ export default function AboutPage() {
             <div className="flex items-center gap-2 px-4 py-2 bg-background/50 rounded-full border border-border text-xs">
               <Database className="h-3 w-3 text-blue-500" /> Shared Insights
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-background/50 rounded-full border border-border text-xs">
-              <BrainCircuit className="h-3 w-3 text-purple-500" /> Collaborative AI
-            </div>
           </div>
-        </section>
-
-        <section className="p-8 bg-accent/5 rounded-2xl border border-accent/20 space-y-4">
-          <h3 className="text-xl font-bold flex items-center gap-2">
-            <Share2 className="h-5 w-5 text-accent" />
-            Як поділитися з друзями?
-          </h3>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Після того, як ви розгорнете проект через <b>Firebase App Hosting</b>, ви отримаєте постійне посилання. Ви можете надіслати його будь-якому тестувальнику. Кожен, хто зайде за посиланням, зможе підключити свою BMS, а ви побачите нові моделі в загальній базі знань.
-          </p>
         </section>
 
         <div className="flex justify-center">
