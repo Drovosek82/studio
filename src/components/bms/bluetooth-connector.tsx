@@ -24,7 +24,6 @@ export function BluetoothConnector() {
     setIsScanning(true);
     setError(null);
     try {
-      // Імітація сканування
       await new Promise(r => setTimeout(r, 2000));
       
       if (!isDemoMode) {
@@ -57,8 +56,8 @@ export function BluetoothConnector() {
     
     if (!isDemoMode) {
       toast({
-        title: "Інформація",
-        description: "Для повноцінної роботи агрегації та отримання даних без реального заліза увімкніть 'Демо-режим'.",
+        title: "Очікування даних",
+        description: "Пристрій додано у стані Offline. Для отримання тестових даних увімкніть 'Демо-режим' у налаштуваннях.",
       });
     }
 
@@ -73,10 +72,12 @@ export function BluetoothConnector() {
     
     addNetworkDevice(espName);
     setEspName("");
-    toast({
-      title: "Пристрій додано",
-      description: `${espName} інтегровано в систему.`,
-    });
+    if (isDemoMode) {
+      toast({
+        title: "Пристрій додано",
+        description: `${espName} інтегровано та підключено до симуляції.`,
+      });
+    }
   };
 
   return (
@@ -131,7 +132,7 @@ export function BluetoothConnector() {
             <CardHeader>
               <CardTitle className="text-lg">Агрегація даних (ESP32)</CardTitle>
               <CardDescription>
-                Додайте вузли ESP32 для моніторингу паралельних збірок.
+                Додайте вузли ESP32 для моніторингу паралельних збірок. При вимкненому демо-режимі пристрої очікуватимуть реальних даних по мережі.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -153,13 +154,18 @@ export function BluetoothConnector() {
                   {devices.filter(d => d.type === 'ESP32').map(dev => (
                     <div key={dev.id} className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg border border-border/50">
                       <div className="flex items-center gap-3">
-                        <Cpu className="h-4 w-4 text-accent" />
+                        <Cpu className={`h-4 w-4 ${dev.status === 'Online' ? 'text-accent' : 'text-muted-foreground'}`} />
                         <div>
                           <p className="text-sm font-medium">{dev.name}</p>
                           <p className="text-[10px] text-muted-foreground">ID: {dev.id}</p>
                         </div>
                       </div>
-                      <Badge variant="outline" className="text-green-500 border-green-500/20">Online</Badge>
+                      <Badge 
+                        variant="outline" 
+                        className={dev.status === 'Online' ? 'text-green-500 border-green-500/20' : 'text-muted-foreground border-muted/20'}
+                      >
+                        {dev.status}
+                      </Badge>
                     </div>
                   ))}
                   {devices.filter(d => d.type === 'ESP32').length === 0 && (

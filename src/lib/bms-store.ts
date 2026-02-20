@@ -10,7 +10,7 @@ const DEMO_DEVICES: BatteryDevice[] = [
   { id: 'BMS_02', name: 'Battery Pack B', type: 'ESP32', status: 'Online' }
 ];
 
-// Допоміжні функції для створення мок-даних (винесено для глобальної ініціалізації)
+// Допоміжні функції для створення мок-даних
 const createMockBatteryData = (id: string, name: string): BatteryData => ({
   id,
   name,
@@ -58,13 +58,13 @@ const createMockHistory = (id: string): HistoricalRecord[] =>
     stateOfCharge: 80 + (i / 50) * 5,
   }));
 
-// Глобальні змінні для збереження стану між викликами хуків
+// Глобальні змінні
 let globalRealTimeData: Record<string, BatteryData> = {};
 let globalHistory: Record<string, HistoricalRecord[]> = {};
 let globalIsDemoMode = true;
 let globalDevices: BatteryDevice[] = [];
 
-// Початкова ініціалізація, якщо демо-режим увімкнено за замовчуванням
+// Ініціалізація
 if (globalIsDemoMode) {
   DEMO_DEVICES.forEach(dev => {
     globalDevices.push(dev);
@@ -85,7 +85,6 @@ export function useBmsStore() {
     setIsDemoModeState(val);
     
     if (!val) {
-      // Повне очищення пристроїв та даних
       globalDevices = [];
       globalRealTimeData = {};
       globalHistory = {};
@@ -93,7 +92,6 @@ export function useBmsStore() {
       setRealTimeData({});
       setHistory({});
     } else {
-      // Відновлення демо-стану з негайною ініціалізацією
       globalDevices = [];
       const initialData: Record<string, BatteryData> = {};
       const initialHistory: Record<string, HistoricalRecord[]> = {};
@@ -114,11 +112,16 @@ export function useBmsStore() {
 
   const addNetworkDevice = useCallback((name: string) => {
     const id = `ESP32_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-    const newDevice: BatteryDevice = { id, name, type: 'ESP32', status: 'Online' };
+    // Якщо демо-режим вимкнено, статус Offline і немає даних
+    const status = globalIsDemoMode ? 'Online' : 'Offline';
+    const newDevice: BatteryDevice = { id, name, type: 'ESP32', status };
     
     globalDevices = [...globalDevices, newDevice];
-    globalRealTimeData[id] = createMockBatteryData(id, name);
-    globalHistory[id] = createMockHistory(id);
+    
+    if (globalIsDemoMode) {
+      globalRealTimeData[id] = createMockBatteryData(id, name);
+      globalHistory[id] = createMockHistory(id);
+    }
     
     setDevices([...globalDevices]);
     setRealTimeData({ ...globalRealTimeData });
