@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, Cpu, Wifi, Shield, Code, Loader2, Globe, User } from "lucide-react";
+import { Download, Cpu, Wifi, Shield, Code, Loader2, Globe, User, Bluetooth } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,23 +15,25 @@ export function FirmwareWizard() {
   const [ssid, setSsid] = useState("");
   const [password, setPassword] = useState("");
   const [deviceId, setDeviceId] = useState("");
+  const [bmsIdentifier, setBmsIdentifier] = useState("");
   const [serverUrl, setServerUrl] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [firmware, setFirmware] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    setDeviceId(`BMS_ESP32_${Math.random().toString(36).substr(2, 4).toUpperCase()}`);
+    const randomId = Math.random().toString(36).substr(2, 4).toUpperCase();
+    setDeviceId(`BMS_BRIDGE_${randomId}`);
     if (typeof window !== 'undefined') {
       setServerUrl(`${window.location.origin}/api/bms/update`);
     }
   }, []);
 
   const handleGenerate = async () => {
-    if (!ssid || !password || !deviceId) {
+    if (!ssid || !password || !deviceId || !bmsIdentifier) {
       toast({
         title: "Помилка",
-        description: "Будь ласка, заповніть всі поля",
+        description: "Будь ласка, заповніть всі поля, включаючи назву BMS",
         variant: "destructive",
       });
       return;
@@ -40,7 +42,7 @@ export function FirmwareWizard() {
     if (!user) {
       toast({
         title: "Помилка авторизації",
-        description: "Ви повинні увійти в систему, щоб пристрій міг надсилати дані у ваш профіль.",
+        description: "Увійдіть у систему, щоб пристрій міг зареєструватися у вашому профілі.",
         variant: "destructive",
       });
       return;
@@ -52,13 +54,13 @@ export function FirmwareWizard() {
         ssid, 
         password, 
         deviceId,
-        // Передаємо userId, щоб ESP32 знав, куди звітувати
+        bmsIdentifier,
         serverUrl: `${serverUrl}?userId=${user.uid}` 
       });
       setFirmware(result.firmwareContent);
       toast({
-        title: "Готово",
-        description: "Прошивку успішно згенеровано з вашим UserID!",
+        title: "Прошивку створено",
+        description: "Тепер ESP32 автоматично підключиться до вашої BMS через Bluetooth.",
       });
     } catch (error) {
       toast({
@@ -76,7 +78,7 @@ export function FirmwareWizard() {
     const element = document.createElement("a");
     const file = new Blob([firmware], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
-    element.download = `JBD_Bridge_${deviceId}.ino`;
+    element.download = `JBD_BLE_Bridge_${deviceId}.ino`;
     document.body.appendChild(element);
     element.click();
   };
@@ -86,17 +88,17 @@ export function FirmwareWizard() {
       <CardHeader>
         <div className="flex items-center gap-2 mb-2">
           <Cpu className="h-5 w-5 text-accent" />
-          <CardTitle>Cloud Bridge Generator</CardTitle>
+          <CardTitle>BLE-WiFi Bridge Generator</CardTitle>
         </div>
         <CardDescription>
-          Створіть прошивку для ESP32. Вона міститиме ваш унікальний ідентифікатор для безпечного зв'язку.
+          Створіть прошивку для ESP32-C3, яка буде зчитувати вашу BMS через Bluetooth і передавати дані в хмару.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {!user && (
           <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-2 text-yellow-500 text-xs">
             <User className="h-4 w-4" />
-            Будь ласка, увійдіть (анонімно або через пошту) перед генерацією прошивки.
+            Будь ласка, увійдіть перед генерацією прошивки.
           </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -125,22 +127,48 @@ export function FirmwareWizard() {
               className="bg-secondary/50 border-none"
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="bmsName" className="flex items-center gap-2">
+              <Bluetooth className="h-4 w-4" /> Назва BMS (Bluetooth)
+            </Label>
+            <Input 
+              id="bmsName" 
+              placeholder="Напр. JBD-SP15S001" 
+              value={bmsIdentifier} 
+              onChange={(e) => setBmsIdentifier(e.target.value)}
+              className="bg-secondary/50 border-none"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="devId" className="flex items-center gap-2">
+              <Cpu className="h-4 w-4" /> ID пристрою
+            </Label>
+            <Input 
+              id="devId" 
+              value={deviceId} 
+              onChange={(e) => setDeviceId(e.target.value)}
+              className="bg-secondary/50 border-none font-code text-xs"
+            />
+          </div>
         </div>
       </CardContent>
-      <CardFooter className="flex gap-3">
+      <CardFooter className="flex flex-col gap-3 items-stretch">
         <Button 
           onClick={handleGenerate} 
           disabled={isGenerating || !user}
-          className="bg-accent text-accent-foreground hover:bg-accent/90"
+          className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
         >
-          {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Згенерувати прошивку'}
+          {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Згенерувати прошивку для моста'}
         </Button>
         {firmware && (
-          <Button variant="outline" onClick={handleDownload} className="border-accent/20 text-accent hover:bg-accent/10">
+          <Button variant="outline" onClick={handleDownload} className="w-full border-accent/20 text-accent hover:bg-accent/10">
             <Download className="mr-2 h-4 w-4" />
-            Завантажити .ino
+            Завантажити .ino файл
           </Button>
         )}
+        <p className="text-[10px] text-muted-foreground text-center">
+          Після прошивки ESP32 автоматично зареєструє пристрій у вашому профілі при першій передачі даних.
+        </p>
       </CardFooter>
     </Card>
   );
