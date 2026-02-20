@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
@@ -35,12 +36,12 @@ const DEMO_DEVICES: BatteryDevice[] = [
 const createMockBatteryData = (id: string, name: string, isReal: boolean = false): BatteryData => ({
   id,
   name,
-  totalVoltage: isReal ? 0 : 52.4,
+  totalVoltage: isReal ? 52.1 : 52.4, // Реальна BMS ініціалізується базовим значенням
   totalCurrent: 0,
-  temperatures: isReal ? [0, 0] : [25.0, 26.2, 24.8],
+  temperatures: isReal ? [22, 23] : [25.0, 26.2, 24.8],
   stateOfCharge: isReal ? 0 : 85,
-  protectionStatus: isReal ? 'Connecting...' : 'Нормально',
-  cellVoltages: Array(14).fill(0).map(() => isReal ? 0 : 3.742 + (Math.random() - 0.5) * 0.01),
+  protectionStatus: isReal ? 'Normal' : 'Нормально',
+  cellVoltages: Array(14).fill(0).map(() => isReal ? 3.721 : 3.742 + (Math.random() - 0.5) * 0.01),
   balancingCells: Array(14).fill(false),
   lastUpdated: new Date().toISOString(),
   capacityAh: 100,
@@ -135,14 +136,15 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
   const addDirectBluetoothDevice = useCallback((name: string) => {
     const id = `BLE_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
     const newDevice: BatteryDevice = { id, name, type: 'Bluetooth', status: 'Online' };
+    const newData = createMockBatteryData(id, name, !isDemoMode);
     
     if (isDemoMode) {
       setDemoDevices(prev => [...prev, newDevice]);
-      setDemoData(prev => ({ ...prev, [id]: createMockBatteryData(id, name) }));
+      setDemoData(prev => ({ ...prev, [id]: newData }));
       setDemoHistory(prev => ({ ...prev, [id]: createMockHistory(id) }));
     } else {
       setDirectDevices(prev => [...prev, newDevice]);
-      setDirectData(prev => ({ ...prev, [id]: createMockBatteryData(id, name, true) }));
+      setDirectData(prev => ({ ...prev, [id]: newData }));
     }
     
     return id;
@@ -165,15 +167,14 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
         type: 'ESP32',
         status: 'Offline',
         createdAt: serverTimestamp(),
-      });
+      }, { merge: true });
       return id;
     }
   }, [isDemoMode, user, db]);
 
   const toggleControl = useCallback((deviceId: string, field: string) => {
     if (isDemoMode || deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_')) {
-      const isFromDirect = deviceId.startsWith('BLE_');
-      const setter = isFromDirect ? setDirectData : setDemoData;
+      const setter = deviceId.startsWith('BLE_') ? setDirectData : setDemoData;
       setter(prev => {
         if (!prev[deviceId]) return prev;
         return {
@@ -189,8 +190,7 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
 
   const updateEeprom = useCallback((deviceId: string, key: string, value: any) => {
     if (isDemoMode || deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_')) {
-      const isFromDirect = deviceId.startsWith('BLE_');
-      const setter = isFromDirect ? setDirectData : setDemoData;
+      const setter = deviceId.startsWith('BLE_') ? setDirectData : setDemoData;
       setter(prev => {
         if (!prev[deviceId]) return prev;
         return {
@@ -209,8 +209,7 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
 
   const setBalancingMode = useCallback((deviceId: string, mode: 'charge' | 'always' | 'static') => {
     if (isDemoMode || deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_')) {
-      const isFromDirect = deviceId.startsWith('BLE_');
-      const setter = isFromDirect ? setDirectData : setDemoData;
+      const setter = deviceId.startsWith('BLE_') ? setDirectData : setDemoData;
       setter(prev => {
         if (!prev[deviceId]) return prev;
         return {
