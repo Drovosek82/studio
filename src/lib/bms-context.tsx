@@ -149,13 +149,17 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     return () => clearInterval(interval);
   }, [localHubIp]);
 
-  // Спершу обчислюємо дані
+  // Обчислення всіх даних - дозволяємо прямі підключення навіть у демо
   const allData = useMemo(() => {
-    const combined: Record<string, BatteryData> = isDemoMode 
-      ? { ...demoData } 
-      : { ...directData, ...hubData, ...pendingDevices };
+    const combined: Record<string, BatteryData> = { 
+      ...directData, 
+      ...hubData, 
+      ...pendingDevices 
+    };
     
-    if (!isDemoMode && fbDevices) {
+    if (isDemoMode) {
+      Object.assign(combined, demoData);
+    } else if (fbDevices) {
       fbDevices.forEach(d => {
         if (!combined[d.id]) combined[d.id] = d;
       });
@@ -163,24 +167,25 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     return combined;
   }, [isDemoMode, demoData, directData, hubData, pendingDevices, fbDevices]);
 
+  // Обчислення списку пристроїв
   const devices = useMemo(() => {
-    if (isDemoMode) return demoDevices;
-    
-    const fromFb = (fbDevices || []).map(d => ({ 
+    const fromFb = (!isDemoMode && fbDevices) ? fbDevices.map(d => ({ 
       id: d.id, 
       name: d.name, 
       type: (d.type || 'ESP32') as any, 
       status: (d.status || 'Offline') as any 
-    }));
+    })) : [];
     
-    const fromPending = Object.values(pendingDevices).map(d => ({
+    const fromDemo = isDemoMode ? demoDevices : [];
+    
+    const fromPending = (!isDemoMode) ? Object.values(pendingDevices).map(d => ({
       id: d.id,
       name: d.name,
       type: 'ESP32' as const,
       status: 'Connecting' as const
-    }));
+    })) : [];
 
-    return [...fromFb, ...fromPending, ...directDevices, ...hubDevices];
+    return [...fromDemo, ...fromFb, ...fromPending, ...directDevices, ...hubDevices];
   }, [isDemoMode, demoDevices, fbDevices, pendingDevices, directDevices, hubDevices]);
 
   const aggregated = useMemo(() => {
@@ -196,7 +201,6 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [devices, allData]);
 
-  // А потім функції, які від них залежать
   const toggleControl = useCallback((deviceId: string, field: string) => {
     const isSpecialId = deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_') || hubData[deviceId];
     if (isDemoMode || isSpecialId) {
@@ -207,7 +211,8 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
         }).catch(e => console.error('Hub Control Error:', e));
       }
 
-      const setter = (deviceId.startsWith('BLE_')) ? setDirectData : setDemoData;
+      const isBle = deviceId.startsWith('BLE_');
+      const setter = isBle ? setDirectData : setDemoData;
       setter(prev => {
         if (!prev[deviceId]) return prev;
         const currentData = prev[deviceId];
@@ -233,7 +238,8 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
         }).catch(e => console.error('Hub EEPROM Error:', e));
       }
 
-      const setter = (deviceId.startsWith('BLE_')) ? setDirectData : setDemoData;
+      const isBle = deviceId.startsWith('BLE_');
+      const setter = isBle ? setDirectData : setDemoData;
       setter(prev => {
         if (!prev[deviceId]) return prev;
         return {
@@ -253,7 +259,8 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
   const setBalancingMode = useCallback((deviceId: string, mode: 'charge' | 'always' | 'static') => {
     const isSpecialId = deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_') || hubData[deviceId];
     if (isDemoMode || isSpecialId) {
-      const setter = (deviceId.startsWith('BLE_')) ? setDirectData : setDemoData;
+      const isBle = deviceId.startsWith('BLE_');
+      const setter = isBle ? setDirectData : setDemoData;
       setter(prev => {
         if (!prev[deviceId]) return prev;
         return {
