@@ -1,20 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, Cpu, Wifi, Shield, Code, Loader2, Globe, User, Bluetooth, Layers, Monitor, Radio, Tv, AlertTriangle, Server, Database } from "lucide-react";
+import { Download, Cpu, Wifi, Shield, Code, Loader2, Globe, User, Bluetooth, Layers, Monitor, Radio, Tv, AlertTriangle, Server, Database, Share2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { generateEsp32Firmware } from "@/ai/flows/generate-esp32-firmware";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase";
 
 export function FirmwareWizard() {
   const { user } = useUser();
-  const [mode, setMode] = useState<'bridge' | 'display' | 'local_server'>('bridge');
+  const [mode, setMode] = useState<'bridge' | 'display' | 'local_server' | 'hub'>('bridge');
   const [displayType, setDisplayType] = useState<string>("none");
   const [customDisplayDescription, setCustomDisplayDescription] = useState("");
   const [ssid, setSsid] = useState("");
@@ -24,16 +25,21 @@ export function FirmwareWizard() {
   const [espModel, setEspModel] = useState<string>("esp32c3");
   const [isGenerating, setIsGenerating] = useState(false);
   const [firmware, setFirmware] = useState<string | null>(null);
+  
+  // Для локального хаба
+  const [useLocalHub, setUseLocalHub] = useState(false);
+  const [localHubIp, setLocalHubIp] = useState("");
+
   const { toast } = useToast();
 
   useEffect(() => {
     const randomId = Math.random().toString(36).substr(2, 4).toUpperCase();
-    const modePrefix = mode === 'local_server' ? 'SRV' : mode.toUpperCase();
+    const modePrefix = mode === 'hub' ? 'HUB' : mode === 'local_server' ? 'SRV' : mode.toUpperCase();
     setDeviceId(`BMS_${modePrefix}_${randomId}`);
   }, [mode]);
 
   useEffect(() => {
-    if (espModel === 'esp8266' && (mode === 'bridge' || mode === 'local_server')) {
+    if (espModel === 'esp8266' && (mode === 'bridge' || mode === 'local_server' || mode === 'hub')) {
       setMode('display');
       toast({
         title: "MCU обмеження",
@@ -43,10 +49,28 @@ export function FirmwareWizard() {
   }, [espModel, mode, toast]);
 
   const handleGenerate = async () => {
-    if (!ssid || !password || !deviceId || (mode !== 'display' && !bmsIdentifier)) {
+    if (!ssid || !password || !deviceId) {
       toast({
         title: "Помилка",
-        description: "Будь ласка, заповніть всі поля конфігурації",
+        description: "Заповніть Wi-Fi та назву пристрою",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (mode === 'bridge' && !bmsIdentifier) {
+      toast({
+        title: "Помилка",
+        description: "Вкажіть Bluetooth назву BMS для моста",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (useLocalHub && !localHubIp) {
+      toast({
+        title: "Помилка",
+        description: "Вкажіть IP-адресу локального хаба",
         variant: "destructive",
       });
       return;
@@ -55,7 +79,7 @@ export function FirmwareWizard() {
     if (!user) {
       toast({
         title: "Помилка авторизації",
-        description: "Увійдіть у систему для генерації прошивки",
+        description: "Увійдіть у систему",
         variant: "destructive",
       });
       return;
@@ -65,11 +89,17 @@ export function FirmwareWizard() {
     try {
       let serverUrl = "";
       if (mode === 'bridge') {
-        serverUrl = `${window.location.origin}/api/bms/update?userId=${user.uid}`;
+        serverUrl = useLocalHub 
+          ? `http://${localHubIp}/api/update` 
+          : `${window.location.origin}/api/bms/update?userId=${user.uid}`;
       } else if (mode === 'display') {
-        serverUrl = `${window.location.origin}/api/bms/aggregated?userId=${user.uid}`;
+        serverUrl = useLocalHub 
+          ? `http://${localHubIp}/api/data` 
+          : `${window.location.origin}/api/bms/aggregated?userId=${user.uid}`;
+      } else if (mode === 'hub') {
+        serverUrl = "Local Hub Aggregator";
       } else {
-        serverUrl = "Local Address (0.0.0.0)";
+        serverUrl = "Standalone Local Server";
       }
 
       const result = await generateEsp32Firmware({ 
@@ -79,14 +109,14 @@ export function FirmwareWizard() {
         ssid, 
         password, 
         deviceId,
-        bmsIdentifier: mode !== 'display' ? bmsIdentifier : undefined,
+        bmsIdentifier: (mode === 'bridge' || mode === 'local_server') ? bmsIdentifier : undefined,
         espModel: espModel as any,
         serverUrl 
       });
       setFirmware(result.firmwareContent);
       toast({
         title: "Прошивку створено",
-        description: `Режим: ${mode === 'local_server' ? 'Локальний сервер' : mode === 'bridge' ? 'Міст' : 'Екран'}.`,
+        description: `Готово для режиму: ${mode.toUpperCase()}.`,
       });
     } catch (error) {
       toast({
@@ -114,32 +144,37 @@ export function FirmwareWizard() {
       <CardHeader>
         <div className="flex items-center gap-2 mb-2">
           <Layers className="h-5 w-5 text-accent" />
-          <CardTitle>Конструктор пристроїв</CardTitle>
+          <CardTitle>Конструктор екосистеми</CardTitle>
         </div>
         <CardDescription>
-          Створіть вузол моніторингу, віддалений екран або автономний локальний сервер.
+          Створіть вузли (Bridges), центральний Хаб (Server) або віддалені дисплеї.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <Tabs value={mode} onValueChange={(val: any) => setMode(val)} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-secondary/50">
-            <TabsTrigger value="bridge" className="gap-2 text-[10px] sm:text-xs" disabled={espModel === 'esp8266'}>
-              <Radio className="h-4 w-4" /> Міст
+          <TabsList className="grid w-full grid-cols-4 bg-secondary/50 h-10">
+            <TabsTrigger value="bridge" className="gap-1 text-[9px] sm:text-xs" disabled={espModel === 'esp8266'}>
+              <Radio className="h-3 w-3" /> Міст
             </TabsTrigger>
-            <TabsTrigger value="local_server" className="gap-2 text-[10px] sm:text-xs" disabled={espModel === 'esp8266'}>
-              <Server className="h-4 w-4" /> Сервер
+            <TabsTrigger value="hub" className="gap-1 text-[9px] sm:text-xs" disabled={espModel === 'esp8266'}>
+              <Share2 className="h-3 w-3" /> Хаб
             </TabsTrigger>
-            <TabsTrigger value="display" className="gap-2 text-[10px] sm:text-xs">
-              <Monitor className="h-4 w-4" /> Екран
+            <TabsTrigger value="local_server" className="gap-1 text-[9px] sm:text-xs" disabled={espModel === 'esp8266'}>
+              <Server className="h-3 w-3" /> Соло
+            </TabsTrigger>
+            <TabsTrigger value="display" className="gap-1 text-[9px] sm:text-xs">
+              <Monitor className="h-3 w-3" /> Екран
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        {espModel === 'esp8266' && mode !== 'display' && (
-          <div className="flex items-center gap-2 text-red-400 bg-red-500/10 p-3 rounded-lg text-xs">
-            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-            ESP8266 не підтримує Bluetooth. Виберіть ESP32 для моста або сервера.
-          </div>
+        {mode === 'hub' && (
+          <Alert variant="default" className="bg-accent/10 border-accent/20 text-accent">
+            <Server className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              Ця ESP32 стане <b>Центральним Сервером</b>. Вона не підключається до BMS сама, а збирає дані від усіх ваших "Містків" (Bridges) у мережі.
+            </AlertDescription>
+          </Alert>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -162,7 +197,7 @@ export function FirmwareWizard() {
 
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
-              <Tv className="h-4 w-4" /> Дисплей (опція)
+              <Tv className="h-4 w-4" /> Дисплей
             </Label>
             <Select value={displayType} onValueChange={setDisplayType}>
               <SelectTrigger className="bg-secondary/50 border-none">
@@ -173,32 +208,42 @@ export function FirmwareWizard() {
                 <SelectItem value="ssd1306">OLED 0.96" (SSD1306)</SelectItem>
                 <SelectItem value="sh1106">OLED 1.3" (SH1106)</SelectItem>
                 <SelectItem value="lcd1602">LCD 1602 (I2C)</SelectItem>
-                <SelectItem value="custom">Інший (Описати ШІ)</SelectItem>
+                <SelectItem value="custom">Інший (Опис ШІ)</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {displayType === 'custom' && (
-            <div className="space-y-2 md:col-span-2">
-              <Label className="flex items-center gap-2 text-accent">
-                <Code className="h-4 w-4" /> Опис дисплея
-              </Label>
-              <Input 
-                placeholder="Напр. OLED 1.54 SPI, Waveshare E-Ink..." 
-                value={customDisplayDescription} 
-                onChange={(e) => setCustomDisplayDescription(e.target.value)}
-                className="bg-secondary/50 border-accent/20 border"
-              />
+          {(mode === 'bridge' || mode === 'display') && (
+            <div className="md:col-span-2 p-4 bg-secondary/30 rounded-lg space-y-4 border border-border/50">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm">Використовувати локальний Хаб</Label>
+                  <p className="text-[10px] text-muted-foreground">Надсилати дані на іншу ESP32 замість хмари</p>
+                </div>
+                <Switch checked={useLocalHub} onCheckedChange={setUseLocalHub} />
+              </div>
+              
+              {useLocalHub && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                  <Label className="text-xs">IP адреса вашого Хаба</Label>
+                  <Input 
+                    placeholder="Напр. 192.168.1.50" 
+                    value={localHubIp} 
+                    onChange={(e) => setLocalHubIp(e.target.value)}
+                    className="bg-background border-accent/20"
+                  />
+                </div>
+              )}
             </div>
           )}
 
-          {mode !== 'display' && (
+          {(mode === 'bridge' || mode === 'local_server') && (
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Bluetooth className="h-4 w-4" /> Назва BMS
               </Label>
               <Input 
-                placeholder="Напр. JBD-SP15S001" 
+                placeholder="Напр. JBD-BMS" 
                 value={bmsIdentifier} 
                 onChange={(e) => setBmsIdentifier(e.target.value)}
                 className="bg-secondary/50 border-none"
@@ -230,20 +275,6 @@ export function FirmwareWizard() {
               className="bg-secondary/50 border-none"
             />
           </div>
-        </div>
-
-        <div className="p-4 bg-accent/5 border border-accent/10 rounded-lg">
-          <h4 className="text-xs font-bold text-accent mb-2 flex items-center gap-2">
-            {mode === 'local_server' ? <Server className="h-3 w-3" /> : <Database className="h-3 w-3" />}
-            {mode === 'local_server' ? 'Логіка сервера:' : mode === 'bridge' ? 'Логіка моста:' : 'Логіка екрана:'}
-          </h4>
-          <p className="text-[10px] text-muted-foreground leading-relaxed">
-            {mode === 'local_server' 
-              ? 'ESP32 створить власний веб-сайт у локальній мережі. Ви зможете бачити дані батареї за його IP-адресою навіть без інтернету.'
-              : mode === 'bridge'
-              ? 'ESP32 збирає дані з BMS та відправляє їх у вашу хмару через інтернет.'
-              : 'ESP32 отримує загальну статистику вашої системи через Wi-Fi та виводить її на дисплей.'}
-          </p>
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-3 items-stretch">
