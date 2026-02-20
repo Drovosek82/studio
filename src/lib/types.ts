@@ -7,12 +7,14 @@ export interface BatteryData {
   stateOfCharge: number;
   protectionStatus: string;
   cellVoltages: number[];
+  balancingCells: boolean[]; // Нове: статус балансування для кожної комірки
   lastUpdated: string;
   capacityAh: number;
   cycleCount: number;
   isChargeEnabled: boolean;
   isDischargeEnabled: boolean;
   isBalancingActive: boolean;
+  balancingMode: 'charge' | 'always' | 'static'; // Нове: режими JBD
   eeprom: Record<string, number | string>;
 }
 

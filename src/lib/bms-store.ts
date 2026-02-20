@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BatteryData, HistoricalRecord, BatteryDevice } from './types';
 
-// Global mock state to persist between page navigations in demo mode
 let globalDevices: BatteryDevice[] = [
   { id: 'BMS_01', name: 'Battery Pack A', type: 'ESP32', status: 'Online' },
   { id: 'BMS_02', name: 'Battery Pack B', type: 'ESP32', status: 'Online' }
@@ -19,7 +18,6 @@ export function useBmsStore() {
   const [history, setHistory] = useState<Record<string, HistoricalRecord[]>>(globalHistory);
   const [isDemoMode, setIsDemoMode] = useState(true);
 
-  // Initialize demo data if empty
   useEffect(() => {
     if (isDemoMode && Object.keys(globalRealTimeData).length === 0) {
       const initialData: Record<string, BatteryData> = {};
@@ -35,14 +33,15 @@ export function useBmsStore() {
           stateOfCharge: 85,
           protectionStatus: 'Нормально',
           cellVoltages: Array(14).fill(0).map(() => 3.742 + (Math.random() - 0.5) * 0.01),
+          balancingCells: Array(14).fill(false),
           lastUpdated: new Date().toISOString(),
           capacityAh: 100,
           cycleCount: 42,
           isChargeEnabled: true,
           isDischargeEnabled: true,
           isBalancingActive: false,
+          balancingMode: 'charge',
           eeprom: {
-            // Capacity & SOC
             design_cap: 10000,
             cycle_cap: 10000,
             cap_100: 4150,
@@ -52,52 +51,16 @@ export function useBmsStore() {
             cap_20: 3600,
             cap_0: 3000,
             dsg_rate: 10,
-            // Voltages
             covp: 4250,
             covp_rel: 4150,
             cuvp: 2700,
             cuvp_rel: 3000,
             povp: 5880,
             puvp: 4200,
-            povp_rel: 5600,
-            puvp_rel: 4400,
-            // Currents
-            chgoc: 5000,
-            dsgoc: 10000,
-            // Temps
-            chgot: 3231,
-            chgot_rel: 3181,
-            chgut: 2731,
-            chgut_rel: 2781,
-            dsgot: 3381,
-            dsgot_rel: 3331,
-            dsgut: 2531,
-            dsgut_rel: 2631,
-            // Config
             bal_start: 3400,
             bal_window: 50,
             shunt_res: 100,
             cell_cnt: 14,
-            func_config: 0x0001,
-            ntc_config: 0x0003,
-            // Calibration
-            cell_cal_1: 3740,
-            cell_cal_2: 3740,
-            cell_cal_3: 3740,
-            cell_cal_4: 3740,
-            cell_cal_5: 3740,
-            cell_cal_6: 3740,
-            cell_cal_7: 3740,
-            cell_cal_8: 3740,
-            cell_cal_9: 3740,
-            cell_cal_10: 3740,
-            cell_cal_11: 3740,
-            cell_cal_12: 3740,
-            cell_cal_13: 3740,
-            cell_cal_14: 3740,
-            idle_current_cal: 0,
-            charge_current_cal: 1000,
-            discharge_current_cal: 1000
           }
         };
 
@@ -116,7 +79,6 @@ export function useBmsStore() {
     }
   }, [isDemoMode]);
 
-  // Simulate real-time updates
   useEffect(() => {
     if (!isDemoMode) return;
 
@@ -125,15 +87,22 @@ export function useBmsStore() {
         const newData = { ...prev };
         Object.keys(newData).forEach(id => {
           const item = newData[id];
-          // Small fluctuations
           const currentVariation = (Math.random() - 0.5) * 0.5;
           const voltageVariation = (Math.random() - 0.5) * 0.05;
           
+          // Імітація балансування: якщо активне, рандомно вибираємо комірки з найвищою напругою
+          let balancingCells = Array(item.cellVoltages.length).fill(false);
+          if (item.isBalancingActive) {
+            const maxV = Math.max(...item.cellVoltages);
+            balancingCells = item.cellVoltages.map(v => v > maxV - 0.005);
+          }
+
           newData[id] = {
             ...item,
-            totalCurrent: item.isDischargeEnabled ? Math.max(0, item.totalCurrent + currentVariation) : 0,
+            totalCurrent: item.isDischargeEnabled ? Math.max(-50, Math.min(100, item.totalCurrent + currentVariation)) : 0,
             totalVoltage: item.totalVoltage + voltageVariation,
             stateOfCharge: Math.min(100, Math.max(0, item.stateOfCharge - (item.totalCurrent > 0 ? 0.001 : -0.001))),
+            balancingCells,
             lastUpdated: new Date().toISOString()
           };
           
@@ -151,14 +120,8 @@ export function useBmsStore() {
       if (!prev[deviceId]) return prev;
       const updated = {
         ...prev[deviceId],
-        eeprom: {
-          ...prev[deviceId].eeprom,
-          [key]: value
-        }
+        eeprom: { ...prev[deviceId].eeprom, [key]: value }
       };
-      if (key === 'design_cap') {
-        updated.capacityAh = Number(value) / 100;
-      }
       globalRealTimeData[deviceId] = updated;
       return { ...prev, [deviceId]: updated };
     });
@@ -167,10 +130,16 @@ export function useBmsStore() {
   const toggleControl = useCallback((deviceId: string, field: 'isChargeEnabled' | 'isDischargeEnabled' | 'isBalancingActive') => {
     setRealTimeData(prev => {
       if (!prev[deviceId]) return prev;
-      const updated = {
-        ...prev[deviceId],
-        [field]: !prev[deviceId][field]
-      };
+      const updated = { ...prev[deviceId], [field]: !prev[deviceId][field] };
+      globalRealTimeData[deviceId] = updated;
+      return { ...prev, [deviceId]: updated };
+    });
+  }, []);
+
+  const setBalancingMode = useCallback((deviceId: string, mode: 'charge' | 'always' | 'static') => {
+    setRealTimeData(prev => {
+      if (!prev[deviceId]) return prev;
+      const updated = { ...prev[deviceId], balancingMode: mode };
       globalRealTimeData[deviceId] = updated;
       return { ...prev, [deviceId]: updated };
     });
@@ -179,7 +148,6 @@ export function useBmsStore() {
   const getAggregatedData = () => {
     const activeData = Object.values(realTimeData);
     if (activeData.length === 0) return null;
-
     return {
       totalVoltage: activeData.reduce((acc, curr) => acc + curr.totalVoltage, 0) / activeData.length,
       totalCurrent: activeData.reduce((acc, curr) => acc + curr.totalCurrent, 0),
@@ -193,14 +161,12 @@ export function useBmsStore() {
     devices,
     activeDeviceId,
     setActiveDeviceId,
-    currentData: realTimeData[activeDeviceId],
     allData: realTimeData,
     history,
-    activeHistory: history[activeDeviceId] || [],
     aggregated: getAggregatedData(),
     isDemoMode,
-    setIsDemoMode,
     updateEeprom,
-    toggleControl
+    toggleControl,
+    setBalancingMode
   };
 }

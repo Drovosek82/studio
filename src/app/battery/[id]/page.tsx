@@ -10,6 +10,7 @@ import { AiAnalysis } from "@/components/bms/ai-analysis";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ArrowLeft, 
   Settings2, 
@@ -17,12 +18,13 @@ import {
   Power,
   Zap,
   Activity,
-  ShieldAlert
+  ShieldAlert,
+  RefreshCw
 } from "lucide-react";
 
 export default function BatteryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { allData, history, toggleControl } = useBmsStore();
+  const { allData, history, toggleControl, setBalancingMode } = useBmsStore();
   const data = allData[id];
   const activeHistory = history[id] || [];
 
@@ -65,7 +67,7 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
         <DashboardHeader data={data} />
         
         <div className="grid grid-cols-1 gap-6">
-          <CellGrid voltages={data.cellVoltages} />
+          <CellGrid voltages={data.cellVoltages} balancingCells={data.balancingCells} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -109,25 +111,50 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        <Activity className={`h-4 w-4 ${data.isBalancingActive ? 'text-accent' : 'text-muted-foreground'}`} />
-                        Балансування
-                      </Label>
-                      <p className="text-[10px] text-muted-foreground">Вирівнювання напруги комірок</p>
+                  <div className="border-t border-border/50 pt-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <Activity className={`h-4 w-4 ${data.isBalancingActive ? 'text-accent' : 'text-muted-foreground'}`} />
+                          Балансування
+                        </Label>
+                        <p className="text-[10px] text-muted-foreground">Головний вимикач вирівнювання</p>
+                      </div>
+                      <Switch 
+                        checked={data.isBalancingActive} 
+                        onCheckedChange={() => toggleControl(id, 'isBalancingActive')}
+                      />
                     </div>
-                    <Switch 
-                      checked={data.isBalancingActive} 
-                      onCheckedChange={() => toggleControl(id, 'isBalancingActive')}
-                    />
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">Режим роботи балансира</Label>
+                      <Select 
+                        value={data.balancingMode} 
+                        onValueChange={(val: any) => setBalancingMode(id, val)}
+                        disabled={!data.isBalancingActive}
+                      >
+                        <SelectTrigger className="bg-secondary/30 border-none h-8 text-xs">
+                          <SelectValue placeholder="Оберіть режим" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border">
+                          <SelectItem value="charge">Тільки при зарядці</SelectItem>
+                          <SelectItem value="static">Статичне (завжди)</SelectItem>
+                          <SelectItem value="always">Смарт (при дельті напруги)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[8px] text-muted-foreground italic">
+                        {data.balancingMode === 'charge' ? "*Балансування працює лише коли подається струм заряду." : 
+                         data.balancingMode === 'static' ? "*Працює постійно при досягненні порогу bal_start." : 
+                         "*Автоматичне визначення оптимального моменту."}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
                 {!data.isChargeEnabled && !data.isDischargeEnabled && (
                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-2">
                     <ShieldAlert className="h-4 w-4 text-red-500 mt-0.5" />
-                    <p className="text-[10px] text-red-400">Всі виходи заблоковано. Батарея повністю ізольована від навантаження та зарядного пристрою.</p>
+                    <p className="text-[10px] text-red-400">Всі виходи заблоковано. Батарея повністю ізольована.</p>
                   </div>
                 )}
              </div>
@@ -142,20 +169,18 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Балансування:</span>
-                    <span className={data.isBalancingActive ? "text-accent font-medium" : "text-muted-foreground"}>
-                      {data.isBalancingActive ? "Активне (Комірки 2, 4, 8)" : "Вимкнено"}
+                    <span className={data.isBalancingActive ? "text-accent font-medium flex items-center gap-1" : "text-muted-foreground"}>
+                      {data.isBalancingActive ? (
+                        <>
+                          Активне <RefreshCw className="h-3 w-3 animate-spin" />
+                        </>
+                      ) : "Вимкнено"}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">MOSFET Заряду:</span>
-                    <span className={data.isChargeEnabled ? "text-green-500 font-medium" : "text-red-500 font-medium"}>
-                      {data.isChargeEnabled ? "УВІМК" : "ВИМК"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">MOSFET Розряду:</span>
-                    <span className={data.isDischargeEnabled ? "text-green-500 font-medium" : "text-red-500 font-medium"}>
-                      {data.isDischargeEnabled ? "УВІМК" : "ВИМК"}
+                    <span className="text-muted-foreground">Активні комірки:</span>
+                    <span className="text-white font-medium">
+                      {data.balancingCells.filter(c => c).length > 0 ? data.balancingCells.map((c, i) => c ? i + 1 : null).filter(Boolean).join(', ') : '—'}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
