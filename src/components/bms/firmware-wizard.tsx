@@ -1,7 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, Cpu, Wifi, Shield, Code, Loader2, Globe, User, Bluetooth, Layers, Monitor, Radio, Tv, AlertTriangle, Server, Database, Share2 } from "lucide-react";
+import { 
+  Download, 
+  Cpu, 
+  Wifi, 
+  Shield, 
+  Code, 
+  Loader2, 
+  Globe, 
+  User, 
+  Bluetooth, 
+  Layers, 
+  Monitor, 
+  Radio, 
+  Tv, 
+  AlertTriangle, 
+  Server, 
+  Database, 
+  Share2,
+  Search
+} from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,9 +44,9 @@ export function FirmwareWizard() {
   const [bmsIdentifier, setBmsIdentifier] = useState("");
   const [espModel, setEspModel] = useState<string>("esp32c3");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isScanningBms, setIsScanningBms] = useState(false);
   const [firmware, setFirmware] = useState<string | null>(null);
   
-  // Для локального хаба
   const [useLocalHub, setUseLocalHub] = useState(false);
   const [localHubIp, setLocalHubIp] = useState("");
 
@@ -48,6 +67,43 @@ export function FirmwareWizard() {
       });
     }
   }, [espModel, mode, toast]);
+
+  const handleScanBms = async () => {
+    if (typeof window !== 'undefined' && !navigator.bluetooth) {
+      toast({
+        title: "Помилка",
+        description: "Ваш браузер не підтримує Web Bluetooth. Використовуйте Chrome або Edge.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsScanningBms(true);
+    try {
+      const device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb']
+      });
+
+      if (device.name) {
+        setBmsIdentifier(device.name);
+        toast({
+          title: "BMS знайдено",
+          description: `Вибрано пристрій: ${device.name}`,
+        });
+      }
+    } catch (err: any) {
+      if (err.name !== 'NotFoundError') {
+        toast({
+          title: "Помилка сканування",
+          description: err.message,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsScanningBms(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!ssid || !password || !deviceId) {
@@ -210,6 +266,18 @@ export function FirmwareWizard() {
             </Select>
           </div>
 
+          {displayType === 'custom' && (
+            <div className="md:col-span-2 space-y-2 animate-in fade-in slide-in-from-top-2">
+              <Label>Опис нестандартного дисплея</Label>
+              <Input 
+                placeholder="Напр. 1.8 TFT ST7735 SPI" 
+                value={customDisplayDescription} 
+                onChange={(e) => setCustomDisplayDescription(e.target.value)}
+                className="bg-secondary/50 border-none"
+              />
+            </div>
+          )}
+
           {(mode === 'bridge' || mode === 'display') && (
             <div className="md:col-span-2 p-4 bg-secondary/30 rounded-lg space-y-4 border border-border/50">
               <div className="flex items-center justify-between">
@@ -235,16 +303,27 @@ export function FirmwareWizard() {
           )}
 
           {mode === 'bridge' && (
-            <div className="space-y-2">
+            <div className="md:col-span-2 space-y-2">
               <Label className="flex items-center gap-2">
-                <Bluetooth className="h-4 w-4" /> Назва BMS
+                <Bluetooth className="h-4 w-4" /> Ідентифікатор BMS
               </Label>
-              <Input 
-                placeholder="Напр. JBD-BMS" 
-                value={bmsIdentifier} 
-                onChange={(e) => setBmsIdentifier(e.target.value)}
-                className="bg-secondary/50 border-none"
-              />
+              <div className="flex gap-2">
+                <Input 
+                  placeholder="Назва пристрою (напр. JBD-BMS)" 
+                  value={bmsIdentifier} 
+                  onChange={(e) => setBmsIdentifier(e.target.value)}
+                  className="bg-secondary/50 border-none"
+                />
+                <Button 
+                  variant="outline" 
+                  onClick={handleScanBms} 
+                  disabled={isScanningBms}
+                  className="border-accent/20 text-accent gap-2 whitespace-nowrap"
+                >
+                  {isScanningBms ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  Знайти
+                </Button>
+              </div>
             </div>
           )}
 
