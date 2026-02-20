@@ -24,7 +24,7 @@ import {
   Cpu,
   Server,
   BrainCircuit,
-  Database,
+  Database as DatabaseIcon,
   Languages,
   Info
 } from "lucide-react";
@@ -163,7 +163,7 @@ export default function Home() {
               </>
             ) : (
               <div className="text-center py-16 bg-secondary/10 rounded-2xl border border-dashed border-border px-4">
-                <Database className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-20" />
+                <DatabaseIcon className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-20" />
                 <h3 className="text-lg font-bold">{t('waitingData')}</h3>
                 <p className="text-xs text-muted-foreground mt-2 max-w-[200px] mx-auto">{t('connectFirst')}</p>
               </div>

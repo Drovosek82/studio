@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -21,7 +20,7 @@ import { useBmsStore } from "@/lib/bms-store";
 import { toast } from "@/hooks/use-toast";
 import { identifyBmsModel } from "@/ai/flows/identify-bms-model";
 import { useUser, useFirestore, setDocumentNonBlocking } from "@/firebase";
-import { doc, getDoc, increment } from "firebase/firestore";
+import { doc, increment } from "firebase/firestore";
 
 export function BluetoothConnector() {
   const router = useRouter();
@@ -71,13 +70,12 @@ export function BluetoothConnector() {
     setIsScanning(true);
     setError(null);
     try {
-      let identification = null;
       let name = "Real BMS";
 
       if (isDemoMode) {
         await new Promise(r => setTimeout(r, 800));
         name = "JBD-BMS-Demo-X";
-        identification = await handleIdentifyAndConnect(name);
+        await handleIdentifyAndConnect(name);
       } else {
         if (typeof window !== 'undefined' && !navigator.bluetooth) {
           throw new Error(t('toastScanError') + ": Browser not supported.");
@@ -87,7 +85,7 @@ export function BluetoothConnector() {
           optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb']
         });
         name = device.name || "Bluetooth BMS";
-        identification = await handleIdentifyAndConnect(name);
+        await handleIdentifyAndConnect(name);
       }
 
       const id = addDirectBluetoothDevice(name);
