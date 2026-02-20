@@ -1,20 +1,22 @@
 'use server';
 /**
- * @fileOverview A Genkit flow for generating personalized ESP32 firmware (.ino file) 
- * configured to connect to JBD BMS via Bluetooth (BLE) and report to the cloud.
- * Now includes support for different ESP32 models to handle radio coexistence.
+ * @fileOverview A Genkit flow for generating personalized ESP32 firmware (.ino file).
+ * Supports two modes: 
+ * 1. Bridge: BMS -> ESP32 -> Cloud (via BLE & Wi-Fi)
+ * 2. Display: Cloud -> ESP32 -> OLED/LCD Screen (via Wi-Fi)
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const GenerateEsp32FirmwareInputSchema = z.object({
+  mode: z.enum(['bridge', 'display']).default('bridge').describe('Operation mode of the ESP32 device.'),
   ssid: z.string().describe('The Wi-Fi network SSID.'),
   password: z.string().describe('The Wi-Fi network password.'),
   deviceId: z.string().describe('A unique identifier for the ESP32 device.'),
-  bmsIdentifier: z.string().describe('The Bluetooth name or MAC address of the JBD BMS.'),
-  espModel: z.enum(['esp32c3', 'esp32s3', 'esp32']).default('esp32c3').describe('The specific ESP32 model to optimize radio usage.'),
-  serverUrl: z.string().optional().default('https://your-app.com/api/bms/update').describe('The API endpoint to send data to.'),
+  bmsIdentifier: z.string().optional().describe('The Bluetooth name of the JBD BMS (required for bridge mode).'),
+  espModel: z.enum(['esp32c3', 'esp32s3', 'esp32']).default('esp32c3').describe('The specific ESP32 model.'),
+  serverUrl: z.string().describe('The API endpoint for data sync.'),
 });
 export type GenerateEsp32FirmwareInput = z.infer<typeof GenerateEsp32FirmwareInputSchema>;
 
@@ -31,25 +33,28 @@ const generateFirmwarePrompt = ai.definePrompt({
   name: 'generateEsp32FirmwarePrompt',
   input: { schema: GenerateEsp32FirmwareInputSchema },
   output: { schema: GenerateEsp32FirmwareOutputSchema },
-  prompt: `You are an expert at generating firmware for a "BMS Cloud Bridge" using {{{espModel}}}.
+  prompt: `You are an expert at generating Arduino firmware for ESP32 (model: {{{espModel}}}).
 
-IMPORTANT RADIO COEXISTENCE RULES:
-The target hardware is {{{espModel}}}. 
-- If espModel is "esp32c3", it has a single antenna/radio. You MUST implement a "time-sharing" approach: scan/read BLE, then disconnect or pause BLE activity before sending Wi-Fi data to prevent radio crashes. Use stable intervals.
-- If espModel is "esp32s3" or "esp32", handle dual-core capabilities to run BLE and Wi-Fi on different cores if possible.
+MODE: {{{mode}}}
 
-Generate a complete Arduino .ino file:
-1. **Wi-Fi**: Connect to SSID "{{{ssid}}}" with password "{{{password}}}".
-2. **BMS BLE Connection**:
-   - Scan for and connect to "{{{bmsIdentifier}}}".
-   - Use Service UUID "FF00" and Characteristic UUIDs "FF01" (Notify/Read) and "FF02" (Write).
-   - Protocol: Send 0xDD 0xA5 0x03 0x00 0xFF 0xFD 0x77.
-3. **Data Reporting**:
-   - Every 10 seconds, send an HTTP POST to "{{{serverUrl}}}".
-   - JSON Payload includes deviceId: "{{{deviceId}}}", voltage, current, soc, temperatures, cellVoltages, and protectionStatus.
-4. **Resilience**: Auto-reconnect Wi-Fi and BLE.
+{{#if (eq mode "bridge")}}
+GOAL: Act as a gateway between JBD BMS and Cloud.
+1. Connect to Wi-Fi "{{{ssid}}}" / "{{{password}}}".
+2. Connect to BMS "{{{bmsIdentifier}}}" via BLE.
+3. Every 10s, read data (0x03 command) and POST JSON to "{{{serverUrl}}}".
+4. Handle radio coexistence for {{{espModel}}}.
+{{else}}
+GOAL: Act as a Remote Dashboard Screen.
+1. Connect to Wi-Fi "{{{ssid}}}" / "{{{password}}}".
+2. Every 5s, perform an HTTP GET request to "{{{serverUrl}}}".
+3. Expect a JSON response with: totalVoltage, totalCurrent, totalPower, and avgSoC.
+4. Output the data to the Serial monitor AND include a generic boilerplate for an I2C SSD1306 OLED display (128x64) on default SDA/SCL pins.
+{{/if}}
 
-Output ONLY the raw .ino file content in the "firmwareContent" field.`,
+Requirements:
+- Use standard Arduino libraries (WiFi, HTTPClient, ArduinoJson).
+- Include robust reconnect logic.
+- Output ONLY raw .ino code.`,
 });
 
 const generateEsp32FirmwareFlow = ai.defineFlow(

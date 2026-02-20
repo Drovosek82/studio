@@ -1,38 +1,36 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, Cpu, Wifi, Shield, Code, Loader2, Globe, User, Bluetooth, Layers } from "lucide-react";
+import { Download, Cpu, Wifi, Shield, Code, Loader2, Globe, User, Bluetooth, Layers, Monitor, Radio } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateEsp32Firmware } from "@/ai/flows/generate-esp32-firmware";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase";
 
 export function FirmwareWizard() {
   const { user } = useUser();
+  const [mode, setMode] = useState<'bridge' | 'display'>('bridge');
   const [ssid, setSsid] = useState("");
   const [password, setPassword] = useState("");
   const [deviceId, setDeviceId] = useState("");
   const [bmsIdentifier, setBmsIdentifier] = useState("");
   const [espModel, setEspModel] = useState<string>("esp32c3");
-  const [serverUrl, setServerUrl] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [firmware, setFirmware] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const randomId = Math.random().toString(36).substr(2, 4).toUpperCase();
-    setDeviceId(`BMS_BRIDGE_${randomId}`);
-    if (typeof window !== 'undefined') {
-      setServerUrl(`${window.location.origin}/api/bms/update`);
-    }
-  }, []);
+    setDeviceId(`BMS_${mode.toUpperCase()}_${randomId}`);
+  }, [mode]);
 
   const handleGenerate = async () => {
-    if (!ssid || !password || !deviceId || !bmsIdentifier) {
+    if (!ssid || !password || !deviceId || (mode === 'bridge' && !bmsIdentifier)) {
       toast({
         title: "Помилка",
         description: "Будь ласка, заповніть всі поля конфігурації",
@@ -44,7 +42,7 @@ export function FirmwareWizard() {
     if (!user) {
       toast({
         title: "Помилка авторизації",
-        description: "Увійдіть у систему для генерації персональної прошивки",
+        description: "Увійдіть у систему для генерації прошивки",
         variant: "destructive",
       });
       return;
@@ -52,23 +50,28 @@ export function FirmwareWizard() {
 
     setIsGenerating(true);
     try {
+      const serverUrl = mode === 'bridge' 
+        ? `${window.location.origin}/api/bms/update?userId=${user.uid}`
+        : `${window.location.origin}/api/bms/aggregated?userId=${user.uid}`;
+
       const result = await generateEsp32Firmware({ 
+        mode,
         ssid, 
         password, 
         deviceId,
-        bmsIdentifier,
+        bmsIdentifier: mode === 'bridge' ? bmsIdentifier : undefined,
         espModel: espModel as any,
-        serverUrl: `${serverUrl}?userId=${user.uid}` 
+        serverUrl 
       });
       setFirmware(result.firmwareContent);
       toast({
         title: "Прошивку створено",
-        description: `Код оптимізовано для моделі ${espModel.toUpperCase()}.`,
+        description: `Режим: ${mode === 'bridge' ? 'Міст' : 'Екран'}. Оптимізовано для ${espModel.toUpperCase()}.`,
       });
     } catch (error) {
       toast({
         title: "Помилка",
-        description: "Не вдалося згенерувати прошивку. Спробуйте пізніше.",
+        description: "Не вдалося згенерувати прошивку.",
         variant: "destructive",
       });
     } finally {
@@ -81,7 +84,7 @@ export function FirmwareWizard() {
     const element = document.createElement("a");
     const file = new Blob([firmware], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
-    element.download = `BMS_Bridge_${espModel}_${deviceId}.ino`;
+    element.download = `${deviceId}.ino`;
     document.body.appendChild(element);
     element.click();
   };
@@ -91,20 +94,24 @@ export function FirmwareWizard() {
       <CardHeader>
         <div className="flex items-center gap-2 mb-2">
           <Layers className="h-5 w-5 text-accent" />
-          <CardTitle>Конструктор BLE-WiFi Моста</CardTitle>
+          <CardTitle>Конструктор пристроїв</CardTitle>
         </div>
         <CardDescription>
-          Налаштуйте вашу ESP32 для стабільної роботи. Для моделей з однією антеною буде застосовано режим Coexistence.
+          Створіть розумний міст для збору даних або віддалений екран для моніторингу системи.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {!user && (
-          <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-2 text-yellow-500 text-xs">
-            <User className="h-4 w-4" />
-            Авторизуйтесь, щоб пристрій автоматично з'явився у вашому профілі.
-          </div>
-        )}
-        
+      <CardContent className="space-y-6">
+        <Tabs value={mode} onValueChange={(val: any) => setMode(val)} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-secondary/50">
+            <TabsTrigger value="bridge" className="gap-2">
+              <Radio className="h-4 w-4" /> Вузол (Міст)
+            </TabsTrigger>
+            <TabsTrigger value="display" className="gap-2">
+              <Monitor className="h-4 w-4" /> Термінал (Екран)
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
@@ -122,18 +129,20 @@ export function FirmwareWizard() {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="bmsName" className="flex items-center gap-2">
-              <Bluetooth className="h-4 w-4" /> Назва BMS
-            </Label>
-            <Input 
-              id="bmsName" 
-              placeholder="Напр. JBD-SP15S001" 
-              value={bmsIdentifier} 
-              onChange={(e) => setBmsIdentifier(e.target.value)}
-              className="bg-secondary/50 border-none"
-            />
-          </div>
+          {mode === 'bridge' && (
+            <div className="space-y-2">
+              <Label htmlFor="bmsName" className="flex items-center gap-2">
+                <Bluetooth className="h-4 w-4" /> Назва BMS
+              </Label>
+              <Input 
+                id="bmsName" 
+                placeholder="Напр. JBD-SP15S001" 
+                value={bmsIdentifier} 
+                onChange={(e) => setBmsIdentifier(e.target.value)}
+                className="bg-secondary/50 border-none"
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="ssid" className="flex items-center gap-2">
@@ -141,7 +150,7 @@ export function FirmwareWizard() {
             </Label>
             <Input 
               id="ssid" 
-              placeholder="SSID" 
+              placeholder="Назва мережі" 
               value={ssid} 
               onChange={(e) => setSsid(e.target.value)}
               className="bg-secondary/50 border-none"
@@ -155,7 +164,7 @@ export function FirmwareWizard() {
             <Input 
               id="password" 
               type="password" 
-              placeholder="Password" 
+              placeholder="Пароль" 
               value={password} 
               onChange={(e) => setPassword(e.target.value)}
               className="bg-secondary/50 border-none"
@@ -163,9 +172,16 @@ export function FirmwareWizard() {
           </div>
         </div>
 
-        <div className="p-3 bg-secondary/30 rounded-lg text-[10px] text-muted-foreground flex flex-col gap-1">
-          <p>• <b>ESP32-C3:</b> ШІ додасть логіку перемикання радіо для уникнення конфліктів антени.</p>
-          <p>• <b>S3/Classic:</b> Буде використано переваги другого ядра для паралельної роботи.</p>
+        <div className="p-4 bg-accent/5 border border-accent/10 rounded-lg">
+          <h4 className="text-xs font-bold text-accent mb-2 flex items-center gap-2">
+            <Monitor className="h-3 w-3" /> 
+            {mode === 'bridge' ? 'Логіка моста:' : 'Логіка екрана:'}
+          </h4>
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
+            {mode === 'bridge' 
+              ? "Пристрій з'єднається з BMS по Bluetooth і відправлятиме дані в хмару кожні 10 секунд. Оптимізовано для обраної моделі чіпа."
+              : "Пристрій буде отримувати агреговані дані (Напруга, Потужність, SOC) всієї системи через Wi-Fi та виводити їх на OLED-дисплей SSD1306."}
+          </p>
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-3 items-stretch">
@@ -174,12 +190,12 @@ export function FirmwareWizard() {
           disabled={isGenerating || !user}
           className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
         >
-          {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Згенерувати оптимізований код'}
+          {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Згенерувати код (.ino)'}
         </Button>
         {firmware && (
           <Button variant="outline" onClick={handleDownload} className="w-full border-accent/20 text-accent hover:bg-accent/10">
             <Download className="mr-2 h-4 w-4" />
-            Завантажити .ino для Arduino IDE
+            Завантажити файл прошивки
           </Button>
         )}
       </CardFooter>
