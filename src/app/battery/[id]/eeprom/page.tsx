@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useState, useEffect } from "react";
@@ -14,14 +13,13 @@ import {
   ArrowLeft, 
   Save, 
   AlertTriangle, 
-  Shield, 
   Zap, 
   Thermometer, 
   Database, 
-  Info, 
   Activity, 
   Wrench,
-  Settings2
+  Settings2,
+  Shield
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -44,13 +42,10 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
 
   const handleSave = () => {
     setIsSaving(true);
-    
-    // Simulate network delay
     setTimeout(() => {
       Object.entries(localSettings).forEach(([key, value]) => {
         updateEeprom(id, key, value);
       });
-      
       setIsSaving(false);
       toast({
         title: "Збережено",
@@ -113,28 +108,28 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
             <Card className="glass-card border-none">
               <CardHeader>
                 <CardTitle className="text-lg">Захист комірок (mV)</CardTitle>
-                <CardDescription>Поріги спрацювання для кожної окремої комірки</CardDescription>
+                <CardDescription>Пороги спрацювання для кожної окремої комірки (1 mV = 0.001 V)</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label>COVP (Over Voltage)</Label>
+                  <Label>COVP (Cell Over Voltage)</Label>
                   <Input value={localSettings.covp || ""} onChange={(e) => handleInputChange('covp', e.target.value)} className="bg-secondary/30" />
-                  <p className="text-[10px] text-muted-foreground">Максимальна напруга комірки (напр. 4250mV).</p>
+                  <p className="text-[10px] text-muted-foreground">Максимальна напруга комірки. При досягненні BMS відключить зарядку.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>COVP Release</Label>
                   <Input value={localSettings.covp_rel || ""} onChange={(e) => handleInputChange('covp_rel', e.target.value)} className="bg-secondary/30" />
-                  <p className="text-[10px] text-muted-foreground">Напруга відновлення заряду.</p>
+                  <p className="text-[10px] text-muted-foreground">Напруга відновлення заряду після спрацювання COVP.</p>
                 </div>
                 <div className="space-y-2">
-                  <Label>CUVP (Under Voltage)</Label>
+                  <Label>CUVP (Cell Under Voltage)</Label>
                   <Input value={localSettings.cuvp || ""} onChange={(e) => handleInputChange('cuvp', e.target.value)} className="bg-secondary/30" />
-                  <p className="text-[10px] text-muted-foreground">Мінімальна напруга комірки (напр. 2700mV).</p>
+                  <p className="text-[10px] text-muted-foreground">Мінімальна напруга комірки. Нижче цього порогу розрядку буде заборонено.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>CUVP Release</Label>
                   <Input value={localSettings.cuvp_rel || ""} onChange={(e) => handleInputChange('cuvp_rel', e.target.value)} className="bg-secondary/30" />
-                  <p className="text-[10px] text-muted-foreground">Напруга відновлення розряду.</p>
+                  <p className="text-[10px] text-muted-foreground">Напруга відновлення розряду після спрацювання CUVP.</p>
                 </div>
               </CardContent>
             </Card>
@@ -142,16 +137,18 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
             <Card className="glass-card border-none">
               <CardHeader>
                 <CardTitle className="text-lg">Захист пакета (10mV)</CardTitle>
-                <CardDescription>Загальна напруга всієї батареї</CardDescription>
+                <CardDescription>Загальна напруга всієї батареї (1 одиниця = 0.01 V)</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>POVP (Pack Over Voltage)</Label>
                   <Input value={localSettings.povp || ""} onChange={(e) => handleInputChange('povp', e.target.value)} className="bg-secondary/30" />
+                  <p className="text-[10px] text-muted-foreground">Наприклад, 5880 = 58.80 V. Захист за загальною напругою.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>PUVP (Pack Under Voltage)</Label>
                   <Input value={localSettings.puvp || ""} onChange={(e) => handleInputChange('puvp', e.target.value)} className="bg-secondary/30" />
+                  <p className="text-[10px] text-muted-foreground">Наприклад, 4200 = 42.00 V. Критично низька загальна напруга.</p>
                 </div>
               </CardContent>
             </Card>
@@ -161,18 +158,18 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
             <Card className="glass-card border-none">
               <CardHeader>
                 <CardTitle className="text-lg">Захист за струмом (10mA)</CardTitle>
-                <CardDescription>Максимально допустимі значення струму</CardDescription>
+                <CardDescription>Максимально допустимі значення (1 одиниця = 0.01 A)</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>CHGOC (Charge Over Current)</Label>
                   <Input value={localSettings.chgoc || ""} onChange={(e) => handleInputChange('chgoc', e.target.value)} className="bg-secondary/30" />
-                  <p className="text-[10px] text-muted-foreground">Струм заряду. 5000 = 50.0A.</p>
+                  <p className="text-[10px] text-muted-foreground">Максимальний струм зарядки. 5000 = 50.00 A.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>DSGOC (Discharge Over Current)</Label>
                   <Input value={localSettings.dsgoc || ""} onChange={(e) => handleInputChange('dsgoc', e.target.value)} className="bg-secondary/30" />
-                  <p className="text-[10px] text-muted-foreground">Струм розряду. 10000 = 100.0A.</p>
+                  <p className="text-[10px] text-muted-foreground">Максимальний струм навантаження. 10000 = 100.00 A.</p>
                 </div>
               </CardContent>
             </Card>
@@ -182,25 +179,28 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
             <Card className="glass-card border-none">
               <CardHeader>
                 <CardTitle className="text-lg">Температурні пороги (0.1K)</CardTitle>
-                <CardDescription>Значення в Кельвінах (T[K] = T[°C] + 273.15)</CardDescription>
+                <CardDescription>Значення в Кельвінах (0°C = 273.1K, 1°C = 0.1K)</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>CHGOT (Charge Over Temp)</Label>
                   <Input value={localSettings.chgot || ""} onChange={(e) => handleInputChange('chgot', e.target.value)} className="bg-secondary/30" />
+                  <p className="text-[10px] text-muted-foreground">Максимальна температура при зарядці. 3231 = 50°C.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>CHGUT (Charge Under Temp)</Label>
                   <Input value={localSettings.chgut || ""} onChange={(e) => handleInputChange('chgut', e.target.value)} className="bg-secondary/30" />
-                  <p className="text-[10px] text-muted-foreground">Заборона зарядки при низьких температурах.</p>
+                  <p className="text-[10px] text-muted-foreground">Мінімальна температура зарядки. 2731 = 0°C (заборона зарядки на морозі).</p>
                 </div>
                 <div className="space-y-2">
                   <Label>DSGOT (Discharge Over Temp)</Label>
                   <Input value={localSettings.dsgot || ""} onChange={(e) => handleInputChange('dsgot', e.target.value)} className="bg-secondary/30" />
+                  <p className="text-[10px] text-muted-foreground">Максимальна температура розрядки. 3381 = 65°C.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>DSGUT (Discharge Under Temp)</Label>
                   <Input value={localSettings.dsgut || ""} onChange={(e) => handleInputChange('dsgut', e.target.value)} className="bg-secondary/30" />
+                  <p className="text-[10px] text-muted-foreground">Мінімальна температура розрядки. 2531 = -20°C.</p>
                 </div>
               </CardContent>
             </Card>
@@ -217,15 +217,18 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
                   <div className="space-y-2">
                     <Label>Design Capacity (10mAh)</Label>
                     <Input value={localSettings.design_cap || ""} onChange={(e) => handleInputChange('design_cap', e.target.value)} className="bg-secondary/30" />
+                    <p className="text-[10px] text-muted-foreground">Паспортна ємність. 10000 = 100 Ah.</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Cycle Capacity (10mAh)</Label>
                     <Input value={localSettings.cycle_cap || ""} onChange={(e) => handleInputChange('cycle_cap', e.target.value)} className="bg-secondary/30" />
+                    <p className="text-[10px] text-muted-foreground">Ємність, яку BMS використовує для підрахунку циклів.</p>
                   </div>
                 </div>
 
                 <div className="border-t border-border/50 pt-4">
                   <h4 className="text-sm font-bold mb-4">Напруга комірки за рівнем заряду (mV)</h4>
+                  <p className="text-[10px] text-muted-foreground mb-4">Ці значення визначають, як BMS переводить напругу у відсотки SOC.</p>
                   <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                     <div className="space-y-1">
                       <Label className="text-[10px]">100% SOC</Label>
@@ -267,21 +270,22 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
                 <div className="space-y-2">
                   <Label>Balancing Start (mV)</Label>
                   <Input value={localSettings.bal_start || ""} onChange={(e) => handleInputChange('bal_start', e.target.value)} className="bg-secondary/30" />
-                  <p className="text-[10px] text-muted-foreground">Напруга, при якій починається балансування.</p>
+                  <p className="text-[10px] text-muted-foreground">Напруга комірки, вище якої BMS почне вирівнювання.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Balancing Window (mV)</Label>
                   <Input value={localSettings.bal_window || ""} onChange={(e) => handleInputChange('bal_window', e.target.value)} className="bg-secondary/30" />
-                  <p className="text-[10px] text-muted-foreground">Різниця між комірками для початку балансування.</p>
+                  <p className="text-[10px] text-muted-foreground">Мінімальна різниця напруги між найсильнішою та найслабшою коміркою для старту.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Number of Cells</Label>
                   <Input value={localSettings.cell_cnt || ""} onChange={(e) => handleInputChange('cell_cnt', e.target.value)} className="bg-secondary/30" />
+                  <p className="text-[10px] text-muted-foreground">Кількість послідовних з'єднань (напр. 14S, 16S).</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Shunt Resistor (μΩ)</Label>
                   <Input value={localSettings.shunt_res || ""} onChange={(e) => handleInputChange('shunt_res', e.target.value)} className="bg-secondary/30" />
-                  <p className="text-[10px] text-muted-foreground">Опір шунта для вимірювання струму.</p>
+                  <p className="text-[10px] text-muted-foreground">Опір вимірювального резистора. Впливає на точність виміру струму.</p>
                 </div>
               </CardContent>
             </Card>
@@ -291,7 +295,7 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
             <Card className="glass-card border-none">
               <CardHeader>
                 <CardTitle className="text-lg">Калібрування комірок (mV)</CardTitle>
-                <CardDescription>Введіть реальні виміряні значення для корекції АЦП</CardDescription>
+                <CardDescription>Введіть реальні виміряні значення для корекції АЦП. Записується точне значення напруги кожної комірки.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-4">
@@ -312,21 +316,23 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
             <Card className="glass-card border-none">
               <CardHeader>
                 <CardTitle className="text-lg">Калібрування струму (10mA)</CardTitle>
-                <CardDescription>Корекція датчика струму (Shunt)</CardDescription>
+                <CardDescription>Корекція датчика струму (Shunt Calibration)</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label>Idle Current Calib</Label>
                   <Input value={localSettings.idle_current_cal || "0"} onChange={(e) => handleInputChange('idle_current_cal', e.target.value)} className="bg-secondary/30" />
-                  <p className="text-[10px] text-muted-foreground">Встановіть 0 при відсутності навантаження.</p>
+                  <p className="text-[10px] text-muted-foreground">Встановіть 0 при повному відключенні навантаження для калібрування "нуля".</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Charge Current Calib</Label>
                   <Input value={localSettings.charge_current_cal || ""} onChange={(e) => handleInputChange('charge_current_cal', e.target.value)} className="bg-secondary/30" />
+                  <p className="text-[10px] text-muted-foreground">Введіть еталонний струм зарядки (напр. 1000 = 10 A).</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Discharge Current Calib</Label>
                   <Input value={localSettings.discharge_current_cal || ""} onChange={(e) => handleInputChange('discharge_current_cal', e.target.value)} className="bg-secondary/30" />
+                  <p className="text-[10px] text-muted-foreground">Введіть еталонний струм розрядки.</p>
                 </div>
               </CardContent>
             </Card>
