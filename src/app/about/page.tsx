@@ -7,14 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   ArrowLeft, 
   Activity, 
-  Bluetooth, 
-  Cpu, 
+  Bluetooth as BluetoothIcon, 
   BrainCircuit, 
   Layers, 
   ShieldCheck,
   Zap,
   Globe,
-  Database
+  Database,
+  Users
 } from "lucide-react";
 
 export default function AboutPage() {
@@ -22,7 +22,7 @@ export default function AboutPage() {
 
   const features = [
     {
-      icon: <Bluetooth className="h-8 w-8 text-blue-500" />,
+      icon: <BluetoothIcon className="h-8 w-8 text-blue-500" />,
       title: t('aboutFeature1Title'),
       desc: t('aboutFeature1Desc'),
     },
@@ -92,21 +92,21 @@ export default function AboutPage() {
 
         <section className="p-8 bg-secondary/20 rounded-2xl border border-border/50 space-y-6">
           <h3 className="text-2xl font-bold flex items-center gap-2">
-            <ShieldCheck className="h-6 w-6 text-green-500" />
-            {t('protection')} & {t('intelligence')}
+            <Users className="h-6 w-6 text-blue-400" />
+            {t('intelligence')} & Community
           </h3>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Система розроблена для професійного моніторингу акумуляторів типу LiFePO4 та Li-ion. Завдяки використанню <b>Genkit</b>, ваш додаток постійно вивчає нове обладнання, допомагаючи автоматизувати налаштування та запобігати аварійним ситуаціям.
+            Важливо розуміти, як працює спільний доступ: ваші дані про батареї є <b>абсолютно приватними</b>. Але технічні знання, які ШІ здобуває під час ваших підключень, стають частиною <b>глобальної бази знань</b>. Це дозволяє спільноті швидше адаптувати нові моделі BMS.
           </p>
           <div className="flex flex-wrap gap-4 pt-4">
             <div className="flex items-center gap-2 px-4 py-2 bg-background/50 rounded-full border border-border text-xs">
-              <Zap className="h-3 w-3 text-accent" /> ESP32-C3 / S3
+              <ShieldCheck className="h-3 w-3 text-green-500" /> Private Telemetry
             </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-background/50 rounded-full border border-border text-xs">
-              <Database className="h-3 w-3 text-blue-500" /> Firestore Storage
+              <Database className="h-3 w-3 text-blue-500" /> Shared Insights
             </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-background/50 rounded-full border border-border text-xs">
-              <BrainCircuit className="h-3 w-3 text-purple-500" /> AI Insights
+              <BrainCircuit className="h-3 w-3 text-purple-500" /> Collaborative AI
             </div>
           </div>
         </section>
