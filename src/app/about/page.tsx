@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -11,19 +10,14 @@ import {
   Bluetooth as BluetoothIcon, 
   BrainCircuit, 
   Layers, 
-  ShieldCheck,
   Globe,
-  Database as DatabaseIcon,
-  Users,
-  Share2,
-  ExternalLink,
-  Menu,
-  MousePointer2,
-  CreditCard,
-  CheckCircle2,
-  Github,
   Info,
-  LayoutProject
+  Github,
+  Menu,
+  LayoutProject,
+  CheckCircle2,
+  CreditCard,
+  ExternalLink
 } from "lucide-react";
 
 export default function AboutPage() {
@@ -81,46 +75,53 @@ export default function AboutPage() {
           </p>
         </section>
 
-        {/* ДЕТАЛЬНА ІНСТРУКЦІЯ ДЛЯ ТЕЛЕФОНУ */}
-        <section className="p-8 bg-purple-500/10 rounded-2xl border border-purple-500/20 space-y-6">
-          <div className="flex items-center gap-3">
-             <Github className="h-8 w-8 text-purple-500" />
-             <h3 className="text-2xl font-bold">Де кнопка GitHub на телефоні?</h3>
+        {/* МОБІЛЬНА ІНСТРУКЦІЯ: ДЕ КНОПКА GITHUB */}
+        <section className="p-8 bg-purple-500/10 rounded-2xl border border-purple-500/20 space-y-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <Github className="h-32 w-32" />
           </div>
           
-          <div className="space-y-4 text-sm leading-relaxed">
-            <p className="text-muted-foreground">Ви зараз дивитесь на **Preview** (попередній перегляд). Кнопка GitHub знаходиться в **Editor** (редакторі), де ми з вами спілкуємось.</p>
-            
-            <div className="bg-background/80 p-5 rounded-xl border border-purple-500/30 space-y-6">
-              <div className="flex gap-4">
-                <div className="h-8 w-8 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 text-sm font-bold">1</div>
-                <div>
-                  <p className="font-bold">Поверніться у вікно чату/редактора</p>
-                  <p className="text-xs text-muted-foreground">Там, де ви пишете мені повідомлення.</p>
-                </div>
-              </div>
-              
-              <div className="flex gap-4">
-                <div className="h-8 w-8 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 text-sm font-bold">2</div>
-                <div>
-                  <p className="font-bold">Натисніть "Проект" або "Меню"</p>
-                  <p className="text-xs text-muted-foreground">У самому верху сторінки зліва натисніть іконку <Menu className="inline h-3 w-3" /> або <LayoutProject className="inline h-3 w-3" />.</p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <div className="h-8 w-8 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 text-sm font-bold">3</div>
-                <div>
-                  <p className="font-bold">Шукайте котика (GitHub)</p>
-                  <p className="text-xs text-muted-foreground">Там буде кнопка <b>"Connect to GitHub"</b> або значок кота. Натисніть її та виберіть свій порожній репозиторій.</p>
-                </div>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+               <Github className="h-8 w-8 text-purple-500" />
+               <h3 className="text-2xl font-bold">Де кнопка GitHub на телефоні?</h3>
+            </div>
+            <p className="text-muted-foreground">
+              Ви зараз у вікні <b>Preview</b> (перегляду). Щоб відправити код на свій GitHub з телефону, вам потрібно знайти меню самого редактора Firebase Studio.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-6 relative z-10">
+            <div className="flex gap-4 items-start">
+              <div className="h-8 w-8 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0 font-bold text-sm shadow-lg shadow-purple-500/20">1</div>
+              <div>
+                <p className="font-bold text-lg">Поверніться в чат/редактор</p>
+                <p className="text-sm text-muted-foreground">Там, де ви пишете мені повідомлення. Це основне вікно Studio.</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-2 text-[11px] text-muted-foreground italic bg-secondary/20 p-4 rounded-lg">
-              <Info className="h-4 w-4 shrink-0 text-accent" />
-              Коли ви це зробите, всі 50+ файлів проекту за 5 секунд з'являться на вашому GitHub. Після цього Firebase App Hosting автоматично запустить збірку і видасть вам вічне посилання!
+            <div className="flex gap-4 items-start">
+              <div className="h-8 w-8 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0 font-bold text-sm shadow-lg shadow-purple-500/20">2</div>
+              <div>
+                <p className="font-bold text-lg">Натисніть на іконку Меню</p>
+                <p className="text-sm text-muted-foreground">У самому верху зліва натисніть на три лінії <Menu className="inline h-4 w-4 mx-1" /> або іконку проекту <LayoutProject className="inline h-4 w-4 mx-1" />.</p>
+              </div>
             </div>
+
+            <div className="flex gap-4 items-start">
+              <div className="h-8 w-8 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0 font-bold text-sm shadow-lg shadow-purple-500/20">3</div>
+              <div>
+                <p className="font-bold text-lg">Шукайте "Connect to GitHub"</p>
+                <p className="text-sm text-muted-foreground">Там буде кнопка з іконкою котика або напис <b>"GitHub"</b>. Натисніть її та виберіть свій порожній репозиторій. Всі 50+ файлів завантажаться автоматично за 5 секунд!</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-background/80 p-4 rounded-xl border border-purple-500/30 flex items-start gap-3">
+            <Info className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+            <p className="text-xs leading-relaxed italic">
+              Після цього ваша збірка у Firebase Console (яка раніше видавала помилку) автоматично почне працювати, і ви отримаєте вічне посилання!
+            </p>
           </div>
         </section>
 
