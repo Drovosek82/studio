@@ -15,7 +15,8 @@ import {
   Server, 
   Share2,
   Search,
-  Bluetooth
+  Bluetooth,
+  BrainCircuit
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,11 +28,13 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { generateEsp32Firmware } from "@/ai/flows/generate-esp32-firmware";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { useBmsStore } from "@/lib/bms-store";
+import { collection, query, orderBy } from "firebase/firestore";
 
 export function FirmwareWizard() {
   const { user } = useUser();
+  const db = useFirestore();
   const { localHubIp: globalLocalHubIp } = useBmsStore();
   
   const [mode, setMode] = useState<'bridge' | 'display' | 'hub'>('bridge');
@@ -50,6 +53,13 @@ export function FirmwareWizard() {
   const [localHubIp, setLocalHubIp] = useState("");
 
   const { toast } = useToast();
+
+  // Отримання моделей з бази знань ШІ
+  const insightsRef = useMemoFirebase(() => 
+    user && db ? query(collection(db, 'users', user.uid, 'modelInsights'), orderBy('modelName', 'asc')) : null,
+  [user, db]);
+  
+  const { data: insights } = useCollection<any>(insightsRef);
 
   useEffect(() => {
     if (globalLocalHubIp && (mode === 'bridge' || mode === 'display')) {
@@ -312,28 +322,51 @@ export function FirmwareWizard() {
           )}
 
           {mode === 'bridge' && (
-            <div className="md:col-span-2 space-y-2">
-              <Label className="flex items-center gap-2">
-                <Bluetooth className="h-4 w-4" /> Ідентифікатор BMS
-              </Label>
-              <div className="flex gap-2">
-                <Input 
-                  placeholder="Назва пристрою (напр. JBD-BMS)" 
-                  value={bmsIdentifier} 
-                  onChange={(e) => setBmsIdentifier(e.target.value)}
-                  className="bg-secondary/50 border-none"
-                />
-                <Button 
-                  variant="outline" 
-                  onClick={handleScanBms} 
-                  disabled={isScanningBms}
-                  className="border-accent/20 text-accent gap-2 whitespace-nowrap"
-                >
-                  {isScanningBms ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                  Знайти
-                </Button>
+            <>
+              {insights && insights.length > 0 && (
+                <div className="md:col-span-2 space-y-2 animate-in fade-in slide-in-from-top-2">
+                  <Label className="flex items-center gap-2">
+                    <BrainCircuit className="h-4 w-4 text-accent" /> Вибір моделі з бази знань ШІ
+                  </Label>
+                  <Select onValueChange={(val) => setBmsIdentifier(val)}>
+                    <SelectTrigger className="bg-secondary/50 border-none">
+                      <SelectValue placeholder="Виберіть відому модель..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {insights.map((insight: any) => (
+                        <SelectItem key={insight.id} value={insight.modelName}>
+                          {insight.modelName} ({insight.protocol})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">ШІ заповнить налаштування на основі обраної моделі.</p>
+                </div>
+              )}
+
+              <div className="md:col-span-2 space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Bluetooth className="h-4 w-4" /> Ідентифікатор BMS
+                </Label>
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="Назва пристрою (напр. JBD-BMS)" 
+                    value={bmsIdentifier} 
+                    onChange={(e) => setBmsIdentifier(e.target.value)}
+                    className="bg-secondary/50 border-none"
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={handleScanBms} 
+                    disabled={isScanningBms}
+                    className="border-accent/20 text-accent gap-2 whitespace-nowrap"
+                  >
+                    {isScanningBms ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    Знайти
+                  </Button>
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           <div className="space-y-2">
