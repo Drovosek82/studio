@@ -22,7 +22,8 @@ import {
   CreditCard,
   CheckCircle2,
   Github,
-  Info
+  Info,
+  LayoutProject
 } from "lucide-react";
 
 export default function AboutPage() {
@@ -80,7 +81,7 @@ export default function AboutPage() {
           </p>
         </section>
 
-        {/* НОВА ІНСТРУКЦІЯ ДЛЯ ТЕЛЕФОНУ */}
+        {/* ДЕТАЛЬНА ІНСТРУКЦІЯ ДЛЯ ТЕЛЕФОНУ */}
         <section className="p-8 bg-purple-500/10 rounded-2xl border border-purple-500/20 space-y-6">
           <div className="flex items-center gap-3">
              <Github className="h-8 w-8 text-purple-500" />
@@ -88,28 +89,37 @@ export default function AboutPage() {
           </div>
           
           <div className="space-y-4 text-sm leading-relaxed">
-            <p>Ваш GitHub зараз порожній, тому Firebase видає помилку. Щоб автоматично відправити туди всі файли:</p>
+            <p className="text-muted-foreground">Ви зараз дивитесь на **Preview** (попередній перегляд). Кнопка GitHub знаходиться в **Editor** (редакторі), де ми з вами спілкуємось.</p>
             
-            <div className="bg-background/80 p-5 rounded-xl border border-purple-500/30 space-y-4">
+            <div className="bg-background/80 p-5 rounded-xl border border-purple-500/30 space-y-6">
               <div className="flex gap-4">
-                <div className="h-6 w-6 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">1</div>
-                <p>Натисніть на іконку <b>меню (три лінії)</b> у самому верхньому куті вікна редактора (не додатка, а саме середовища розробки).</p>
+                <div className="h-8 w-8 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 text-sm font-bold">1</div>
+                <div>
+                  <p className="font-bold">Поверніться у вікно чату/редактора</p>
+                  <p className="text-xs text-muted-foreground">Там, де ви пишете мені повідомлення.</p>
+                </div>
               </div>
               
               <div className="flex gap-4">
-                <div className="h-6 w-6 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">2</div>
-                <p>Шукайте вкладку <b>"Project"</b> або <b>"Deploy"</b>. Там має бути іконка з котиком (GitHub).</p>
+                <div className="h-8 w-8 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 text-sm font-bold">2</div>
+                <div>
+                  <p className="font-bold">Натисніть "Проект" або "Меню"</p>
+                  <p className="text-xs text-muted-foreground">У самому верху сторінки зліва натисніть іконку <Menu className="inline h-3 w-3" /> або <LayoutProject className="inline h-3 w-3" />.</p>
+                </div>
               </div>
 
               <div className="flex gap-4">
-                <div className="h-6 w-6 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">3</div>
-                <p>Натисніть <b>"Connect to GitHub"</b> або <b>"Push"</b>. Виберіть свій репозиторій. Це завантажить усі 50+ файлів автоматично за 5 секунд!</p>
+                <div className="h-8 w-8 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 text-sm font-bold">3</div>
+                <div>
+                  <p className="font-bold">Шукайте котика (GitHub)</p>
+                  <p className="text-xs text-muted-foreground">Там буде кнопка <b>"Connect to GitHub"</b> або значок кота. Натисніть її та виберіть свій порожній репозиторій.</p>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-start gap-2 text-[10px] text-muted-foreground italic bg-secondary/20 p-3 rounded-lg">
-              <Info className="h-3 w-3 shrink-0" />
-              Коли на GitHub з'являться файли (package.json та інші), помилка "No buildpack groups passed detection" у Firebase зникне сама собою.
+            <div className="flex items-start gap-2 text-[11px] text-muted-foreground italic bg-secondary/20 p-4 rounded-lg">
+              <Info className="h-4 w-4 shrink-0 text-accent" />
+              Коли ви це зробите, всі 50+ файлів проекту за 5 секунд з'являться на вашому GitHub. Після цього Firebase App Hosting автоматично запустить збірку і видасть вам вічне посилання!
             </div>
           </div>
         </section>
@@ -131,50 +141,6 @@ export default function AboutPage() {
               <CheckCircle2 className="h-4 w-4 text-green-500" />
               <span className="text-xs">{t('aboutPriceLimit2')}</span>
             </div>
-          </div>
-        </section>
-
-        <section className="p-8 bg-blue-500/10 rounded-2xl border border-blue-500/20 space-y-6">
-          <h3 className="text-xl font-bold flex items-center gap-2">
-            <Share2 className="h-5 w-5 text-blue-500" />
-            {t('aboutShareMobileTitle')}
-          </h3>
-          <div className="space-y-4">
-            <div className="flex gap-4 items-start">
-              <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">1</div>
-              <div>
-                <p className="font-bold text-sm">{t('aboutStep1Title')}</p>
-                <p className="text-xs text-muted-foreground">{t('aboutStep1Desc')} <Menu className="inline h-3 w-3" />.</p>
-              </div>
-            </div>
-            <div className="flex gap-4 items-start">
-              <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">2</div>
-              <div>
-                <p className="font-bold text-sm">{t('aboutStep2Title')}</p>
-                <p className="text-xs text-muted-foreground">{t('aboutStep2Desc')}</p>
-              </div>
-            </div>
-            <div className="flex gap-4 items-start">
-              <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">3</div>
-              <div>
-                <p className="font-bold text-sm">{t('aboutStep3Title')}</p>
-                <p className="text-xs text-muted-foreground">{t('aboutStep3Desc')}</p>
-              </div>
-            </div>
-            <div className="flex gap-4 items-start">
-              <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">4</div>
-              <div>
-                <p className="font-bold text-sm">{t('aboutStep4Title')}</p>
-                <p className="text-xs text-muted-foreground">{t('aboutStep4Desc')} <MousePointer2 className="inline h-3 w-3" />.</p>
-              </div>
-            </div>
-          </div>
-          <div className="pt-4">
-            <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700" asChild>
-              <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">
-                {t('openFirebaseConsole')} <ExternalLink className="h-3 w-3" />
-              </a>
-            </Button>
           </div>
         </section>
 
