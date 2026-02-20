@@ -8,9 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { useBmsStore } from "@/lib/bms-store";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 
 export function BluetoothConnector() {
@@ -24,23 +24,45 @@ export function BluetoothConnector() {
     setIsScanning(true);
     setError(null);
     try {
-      await new Promise(r => setTimeout(r, 2000));
-      
-      if (!isDemoMode) {
-        throw new Error("Реальних BMS пристроїв не знайдено поблизу. Увімкніть 'Демо-режим' у налаштуваннях для симуляції підключення.");
+      if (isDemoMode) {
+        await new Promise(r => setTimeout(r, 2000));
+        const bmsName = "JBD-BMS-Direct-Demo";
+        const id = addDirectBluetoothDevice(bmsName);
+        toast({
+          title: "Підключено (Simulated)",
+          description: `Пряме підключення до ${bmsName} встановлено.`,
+        });
+        router.push(`/battery/${id}`);
+        return;
       }
-      
-      const bmsName = "JBD-BMS-Direct-Demo";
-      const id = addDirectBluetoothDevice(bmsName);
+
+      // Реальна логіка Web Bluetooth
+      if (!navigator.bluetooth) {
+        throw new Error("Ваш браузер не підтримує Web Bluetooth. Використовуйте Chrome або Edge через HTTPS.");
+      }
+
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [
+          { namePrefix: 'JBD' },
+          { namePrefix: 'BMS' }
+        ],
+        optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb'] // Стандартний сервіс JBD
+      });
+
+      const id = addDirectBluetoothDevice(device.name || "Real JBD-BMS");
       
       toast({
-        title: "Підключено (Simulated)",
-        description: `Пряме підключення до ${bmsName} встановлено.`,
+        title: "Пристрій знайдено",
+        description: `З'єднання з ${device.name} встановлено.`,
       });
       
       router.push(`/battery/${id}`);
     } catch (err: any) {
-      setError(err.message || "Помилка підключення до Bluetooth");
+      if (err.name === 'NotFoundError') {
+        setError("Пристроїв не знайдено або пошук скасовано користувачем.");
+      } else {
+        setError(err.message || "Помилка підключення до Bluetooth");
+      }
       toast({
         title: "Помилка пошуку",
         description: err.message,
@@ -105,23 +127,23 @@ export function BluetoothConnector() {
             <CardHeader>
               <CardTitle className="text-lg">Підключення до однієї BMS</CardTitle>
               <CardDescription>
-                Швидкий доступ до параметрів без агрегації. Потребує увімкненого Демо-режиму для симуляції.
+                Швидкий доступ до параметрів без агрегації. Потребує підтримки Web Bluetooth у браузері.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-accent/20 rounded-xl bg-accent/5">
-                <Bluetooth className={`h-16 w-16 text-accent mb-4 ${isScanning ? 'animate-spin' : ''}`} />
+                <Bluetooth className={`h-16 w-16 text-accent mb-4 ${isScanning ? 'animate-pulse' : ''}`} />
                 <Button 
                   size="lg" 
                   onClick={handleDirectBluetooth}
                   disabled={isScanning}
                   className="bg-accent text-accent-foreground hover:bg-accent/90"
                 >
-                  {isScanning ? "Сканування ефіру..." : "Знайти BMS пристрої"}
+                  {isScanning ? "Сканування..." : "Знайти BMS пристрої"}
                 </Button>
               </div>
-              <p className="text-[10px] text-muted-foreground text-center">
-                *У реальних умовах тут використовується Web Bluetooth API для зв'язку з JBD.
+              <p className="text-[10px] text-muted-foreground text-center italic">
+                *Примітка: Web Bluetooth працює лише через HTTPS та у браузерах на базі Chromium (Chrome, Edge).
               </p>
             </CardContent>
           </Card>
@@ -132,7 +154,7 @@ export function BluetoothConnector() {
             <CardHeader>
               <CardTitle className="text-lg">Агрегація даних (ESP32)</CardTitle>
               <CardDescription>
-                Додайте вузли ESP32 для моніторингу паралельних збірок. При вимкненому демо-режимі пристрої очікуватимуть реальних даних по мережі.
+                Додайте вузли ESP32 для моніторингу паралельних збірок.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

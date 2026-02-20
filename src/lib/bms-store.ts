@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -7,10 +8,9 @@ import {
   useFirestore, 
   useCollection, 
   useMemoFirebase,
-  updateDocumentNonBlocking,
-  addDocumentNonBlocking
+  updateDocumentNonBlocking
 } from '@/firebase';
-import { collection, doc, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp } from 'firebase/firestore';
 
 // Початкові демо-дані
 const DEMO_DEVICES: BatteryDevice[] = [
@@ -66,7 +66,7 @@ export function useBmsStore() {
   const db = useFirestore();
   const [isDemoMode, setIsDemoModeState] = useState(true);
   
-  // Локальний стейт для Демо-режиму
+  // Локальний стейт
   const [demoDevices, setDemoDevices] = useState<BatteryDevice[]>(DEMO_DEVICES);
   const [demoData, setDemoData] = useState<Record<string, BatteryData>>({});
   const [demoHistory, setDemoHistory] = useState<Record<string, HistoricalRecord[]>>({});
@@ -124,6 +124,17 @@ export function useBmsStore() {
     }
   };
 
+  const addDirectBluetoothDevice = useCallback((name: string) => {
+    const id = `BLE_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+    const newDevice: BatteryDevice = { id, name, type: 'Bluetooth', status: 'Online' };
+    
+    setDemoDevices(prev => [...prev, newDevice]);
+    setDemoData(prev => ({ ...prev, [id]: createMockBatteryData(id, name) }));
+    setDemoHistory(prev => ({ ...prev, [id]: createMockHistory(id) }));
+    
+    return id;
+  }, []);
+
   const addNetworkDevice = useCallback((name: string) => {
     if (isDemoMode) {
       const id = `ESP32_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
@@ -147,21 +158,47 @@ export function useBmsStore() {
   }, [isDemoMode, user, db]);
 
   const toggleControl = useCallback((deviceId: string, field: string) => {
-    if (isDemoMode) {
+    if (isDemoMode || deviceId.startsWith('BLE_')) {
       setDemoData(prev => ({
         ...prev,
         [deviceId]: { ...prev[deviceId], [field]: !prev[deviceId][field as keyof BatteryData] }
       }));
     } else if (user && db) {
       const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', deviceId);
-      // @ts-ignore
-      updateDocumentNonBlocking(deviceRef, { [field]: true }); // Спрощена логіка для MVP
+      updateDocumentNonBlocking(deviceRef, { [field]: true }); 
+    }
+  }, [isDemoMode, user, db]);
+
+  const updateEeprom = useCallback((deviceId: string, key: string, value: any) => {
+    if (isDemoMode || deviceId.startsWith('BLE_')) {
+      setDemoData(prev => ({
+        ...prev,
+        [deviceId]: {
+          ...prev[deviceId],
+          eeprom: { ...prev[deviceId].eeprom, [key]: value }
+        }
+      }));
+    } else if (user && db) {
+      const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', deviceId);
+      updateDocumentNonBlocking(deviceRef, { [`eeprom.${key}`]: value });
+    }
+  }, [isDemoMode, user, db]);
+
+  const setBalancingMode = useCallback((deviceId: string, mode: 'charge' | 'always' | 'static') => {
+    if (isDemoMode || deviceId.startsWith('BLE_')) {
+      setDemoData(prev => ({
+        ...prev,
+        [deviceId]: { ...prev[deviceId], balancingMode: mode }
+      }));
+    } else if (user && db) {
+      const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', deviceId);
+      updateDocumentNonBlocking(deviceRef, { balancingMode: mode });
     }
   }, [isDemoMode, user, db]);
 
   const getAggregatedData = () => {
     const activeDevices = isDemoMode ? demoDevices : (fbDevices || []);
-    const activeData = isDemoMode ? demoData : {}; // У реальному режимі дані прийдуть через subcollections
+    const activeData = isDemoMode ? demoData : {}; 
     
     const networkData = activeDevices
       .filter((d: any) => d.type === 'ESP32')
@@ -187,7 +224,10 @@ export function useBmsStore() {
     isDemoMode,
     setDemoMode,
     toggleControl,
+    updateEeprom,
+    setBalancingMode,
     addNetworkDevice,
+    addDirectBluetoothDevice,
     user
   };
 }
