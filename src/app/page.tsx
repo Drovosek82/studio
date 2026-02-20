@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -26,7 +25,8 @@ import {
   Server,
   BrainCircuit,
   Database,
-  Languages
+  Languages,
+  Info
 } from "lucide-react";
 import { FirmwareWizard } from "@/components/bms/firmware-wizard";
 import { AiKnowledgeBase } from "@/components/bms/ai-knowledge-base";
@@ -47,7 +47,13 @@ export default function Home() {
               <p className="text-[10px] uppercase font-bold text-accent opacity-70 tracking-[0.2em]">{t('subtitle')}</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Link href="/about">
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
+                <Info className="h-5 w-5" />
+              </Button>
+            </Link>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
@@ -55,22 +61,22 @@ export default function Home() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="glass-card border-none">
-                <DropdownMenuItem onClick={() => setLang('uk')} className={lang === 'uk' ? 'text-accent' : ''}>
+                <DropdownMenuItem onClick={() => setLang('uk')} className={lang === 'uk' ? 'text-accent font-bold' : ''}>
                   Українська
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setLang('en')} className={lang === 'en' ? 'text-accent' : ''}>
+                <DropdownMenuItem onClick={() => setLang('en')} className={lang === 'en' ? 'text-accent font-bold' : ''}>
                   English
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
             {localHubIp && (
-              <Badge variant="outline" className="border-green-500/20 text-green-500 gap-1">
+              <Badge variant="outline" className="border-green-500/20 text-green-500 gap-1 hidden md:flex">
                 <Server className="h-3 w-3" /> {localHubIp}
               </Badge>
             )}
             {isDemoMode && (
-              <Badge variant="outline" className="border-accent/20 text-accent gap-1 animate-pulse">
+              <Badge variant="outline" className="border-accent/20 text-accent gap-1 animate-pulse hidden md:flex">
                 <CircleDot className="h-3 w-3" /> {t('demoMode')}
               </Badge>
             )}
@@ -108,7 +114,7 @@ export default function Home() {
                     <h3 className="text-2xl font-bold text-accent">{aggregated.totalCurrent.toFixed(1)} A</h3>
                   </Card>
                   <Card className="glass-card border-none p-4">
-                    <p className="text-muted-foreground text-[10px] font-bold uppercase">{t('power')}</p>
+                    <p className="text-muted-foreground text-[10px] font-bold uppercase">{t('powerWatt')}</p>
                     <h3 className="text-2xl font-bold text-accent">{(aggregated.totalPower / 1000).toFixed(2)} kW</h3>
                   </Card>
                   <Card className="glass-card border-none p-4">
