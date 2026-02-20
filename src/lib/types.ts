@@ -8,7 +8,9 @@ export interface BatteryData {
   protectionStatus: string;
   cellVoltages: number[];
   lastUpdated: string;
-  capacityAh?: number;
+  capacityAh: number;
+  cycleCount: number;
+  eeprom: Record<string, number | string>;
 }
 
 export interface HistoricalRecord {

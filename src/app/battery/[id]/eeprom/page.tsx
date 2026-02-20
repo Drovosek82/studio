@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { useBmsStore } from "@/lib/bms-store";
 import { Button } from "@/components/ui/button";
@@ -13,22 +13,43 @@ import { toast } from "@/hooks/use-toast";
 
 export default function EepromPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { allData } = useBmsStore();
+  const { allData, updateEeprom } = useBmsStore();
   const data = allData[id];
   const [isSaving, setIsSaving] = useState(false);
+  const [localSettings, setLocalSettings] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (data?.eeprom) {
+      setLocalSettings(data.eeprom);
+    }
+  }, [data]);
+
+  const handleInputChange = (key: string, value: string) => {
+    setLocalSettings(prev => ({ ...prev, [key]: value }));
+  };
 
   const handleSave = () => {
     setIsSaving(true);
+    
+    // Simulate network delay
     setTimeout(() => {
+      Object.entries(localSettings).forEach(([key, value]) => {
+        updateEeprom(id, key, value);
+      });
+      
       setIsSaving(false);
       toast({
         title: "Збережено",
-        description: "Конфігурацію успішно записано в EEPROM.",
+        description: "Конфігурацію успішно записано в пам'ять (Демо режим).",
       });
-    }, 1500);
+    }, 1000);
   };
 
-  if (!data) return null;
+  if (!data) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <p className="text-muted-foreground">Завантаження даних...</p>
+    </div>
+  );
 
   return (
     <main className="min-h-screen bg-background text-foreground pb-12">
@@ -78,19 +99,35 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>COVP (Over Voltage)</Label>
-                  <Input defaultValue="4250" className="bg-secondary/30" />
+                  <Input 
+                    value={localSettings.covp || ""} 
+                    onChange={(e) => handleInputChange('covp', e.target.value)}
+                    className="bg-secondary/30" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>COVP Release</Label>
-                  <Input defaultValue="4150" className="bg-secondary/30" />
+                  <Input 
+                    value={localSettings.covp_rel || ""} 
+                    onChange={(e) => handleInputChange('covp_rel', e.target.value)}
+                    className="bg-secondary/30" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>CUVP (Under Voltage)</Label>
-                  <Input defaultValue="2700" className="bg-secondary/30" />
+                  <Input 
+                    value={localSettings.cuvp || ""} 
+                    onChange={(e) => handleInputChange('cuvp', e.target.value)}
+                    className="bg-secondary/30" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>CUVP Release</Label>
-                  <Input defaultValue="3000" className="bg-secondary/30" />
+                  <Input 
+                    value={localSettings.cuvp_rel || ""} 
+                    onChange={(e) => handleInputChange('cuvp_rel', e.target.value)}
+                    className="bg-secondary/30" 
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -103,11 +140,19 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>POVP (Pack Over Voltage)</Label>
-                  <Input defaultValue="5880" className="bg-secondary/30" />
+                  <Input 
+                    value={localSettings.povp || ""} 
+                    onChange={(e) => handleInputChange('povp', e.target.value)}
+                    className="bg-secondary/30" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>PUVP (Pack Under Voltage)</Label>
-                  <Input defaultValue="4200" className="bg-secondary/30" />
+                  <Input 
+                    value={localSettings.puvp || ""} 
+                    onChange={(e) => handleInputChange('puvp', e.target.value)}
+                    className="bg-secondary/30" 
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -141,11 +186,19 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>CHGOT (Charge Over Temp)</Label>
-                  <Input defaultValue="3231" className="bg-secondary/30" />
+                  <Input 
+                    value={localSettings.chgot || ""} 
+                    onChange={(e) => handleInputChange('chgot', e.target.value)}
+                    className="bg-secondary/30" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>DSGOT (Discharge Over Temp)</Label>
-                  <Input defaultValue="3381" className="bg-secondary/30" />
+                  <Input 
+                    value={localSettings.dsgot || ""} 
+                    onChange={(e) => handleInputChange('dsgot', e.target.value)}
+                    className="bg-secondary/30" 
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -159,15 +212,27 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Design Capacity (10mAh)</Label>
-                  <Input defaultValue="10000" className="bg-secondary/30" />
+                  <Input 
+                    value={localSettings.design_cap || ""} 
+                    onChange={(e) => handleInputChange('design_cap', e.target.value)}
+                    className="bg-secondary/30" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Cycle Capacity (10mAh)</Label>
-                  <Input defaultValue="10000" className="bg-secondary/30" />
+                  <Input 
+                    value={localSettings.cycle_cap || ""} 
+                    onChange={(e) => handleInputChange('cycle_cap', e.target.value)}
+                    className="bg-secondary/30" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Number of Cells</Label>
-                  <Input defaultValue="14" className="bg-secondary/30" />
+                  <Input 
+                    value={localSettings.cell_cnt || ""} 
+                    onChange={(e) => handleInputChange('cell_cnt', e.target.value)}
+                    className="bg-secondary/30" 
+                  />
                 </div>
               </CardContent>
             </Card>

@@ -3,57 +3,130 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BatteryData, HistoricalRecord, BatteryDevice } from './types';
 
+// Global mock state to persist between page navigations in demo mode
+let globalDevices: BatteryDevice[] = [
+  { id: 'BMS_01', name: 'Battery Pack A', type: 'ESP32', status: 'Online' },
+  { id: 'BMS_02', name: 'Battery Pack B', type: 'ESP32', status: 'Online' }
+];
+
+let globalRealTimeData: Record<string, BatteryData> = {};
+let globalHistory: Record<string, HistoricalRecord[]> = {};
+
 export function useBmsStore() {
-  const [devices, setDevices] = useState<BatteryDevice[]>([
-    { id: 'BMS_01', name: 'Battery Pack A', type: 'ESP32', status: 'Online' },
-    { id: 'BMS_02', name: 'Battery Pack B', type: 'ESP32', status: 'Online' }
-  ]);
+  const [devices, setDevices] = useState<BatteryDevice[]>(globalDevices);
   const [activeDeviceId, setActiveDeviceId] = useState<string>('BMS_01');
-  const [realTimeData, setRealTimeData] = useState<Record<string, BatteryData>>({});
-  const [history, setHistory] = useState<Record<string, HistoricalRecord[]>>({});
+  const [realTimeData, setRealTimeData] = useState<Record<string, BatteryData>>(globalRealTimeData);
+  const [history, setHistory] = useState<Record<string, HistoricalRecord[]>>(globalHistory);
   const [isDemoMode, setIsDemoMode] = useState(true);
 
-  // Initialize demo data for multiple devices
+  // Initialize demo data if empty
   useEffect(() => {
-    if (isDemoMode) {
+    if (isDemoMode && Object.keys(globalRealTimeData).length === 0) {
       const initialData: Record<string, BatteryData> = {};
       const initialHistory: Record<string, HistoricalRecord[]> = {};
 
-      devices.forEach(dev => {
+      globalDevices.forEach(dev => {
         initialData[dev.id] = {
           id: dev.id,
           name: dev.name,
-          totalVoltage: 52.4 + (Math.random() - 0.5) * 0.2,
-          totalCurrent: 2.0 + Math.random() * 5,
-          temperature: 24.5 + Math.random(),
-          stateOfCharge: 80 + Math.random() * 15,
+          totalVoltage: 52.4,
+          totalCurrent: 2.5,
+          temperature: 25.0,
+          stateOfCharge: 85,
           protectionStatus: 'Нормально',
-          cellVoltages: Array(14).fill(0).map(() => 3.7 + Math.random() * 0.1),
+          cellVoltages: Array(14).fill(0).map(() => 3.742 + (Math.random() - 0.5) * 0.01),
           lastUpdated: new Date().toISOString(),
           capacityAh: 100,
+          cycleCount: 42,
+          eeprom: {
+            design_cap: 10000,
+            cycle_cap: 10000,
+            covp: 4250,
+            covp_rel: 4150,
+            cuvp: 2700,
+            cuvp_rel: 3000,
+            povp: 5880,
+            puvp: 4200,
+            chgot: 3231,
+            dsgot: 3381,
+            cell_cnt: 14
+          }
         };
 
         initialHistory[dev.id] = Array(50).fill(0).map((_, i) => ({
           timestamp: new Date(Date.now() - (50 - i) * 60000).toISOString(),
           totalVoltage: 52.0 + Math.random() * 0.8,
           totalCurrent: 1.0 + Math.random() * 5,
-          stateOfCharge: 80 + (i / 50) * 10,
+          stateOfCharge: 80 + (i / 50) * 5,
         }));
       });
 
-      setRealTimeData(initialData);
-      setHistory(initialHistory);
+      globalRealTimeData = initialData;
+      globalHistory = initialHistory;
+      setRealTimeData({ ...initialData });
+      setHistory({ ...initialHistory });
     }
-  }, [isDemoMode, devices]);
+  }, [isDemoMode]);
 
-  // Aggregated data calculation
+  // Simulate real-time updates
+  useEffect(() => {
+    if (!isDemoMode) return;
+
+    const interval = setInterval(() => {
+      setRealTimeData(prev => {
+        const newData = { ...prev };
+        Object.keys(newData).forEach(id => {
+          const item = newData[id];
+          // Small fluctuations
+          const currentVariation = (Math.random() - 0.5) * 0.5;
+          const voltageVariation = (Math.random() - 0.5) * 0.05;
+          
+          newData[id] = {
+            ...item,
+            totalCurrent: Math.max(0, item.totalCurrent + currentVariation),
+            totalVoltage: item.totalVoltage + voltageVariation,
+            stateOfCharge: Math.min(100, Math.max(0, item.stateOfCharge - (item.totalCurrent > 0 ? 0.001 : -0.001))),
+            lastUpdated: new Date().toISOString()
+          };
+          
+          // Update global state too
+          globalRealTimeData[id] = newData[id];
+        });
+        return newData;
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isDemoMode]);
+
+  const updateEeprom = useCallback((deviceId: string, key: string, value: number | string) => {
+    setRealTimeData(prev => {
+      if (!prev[deviceId]) return prev;
+      const updated = {
+        ...prev[deviceId],
+        eeprom: {
+          ...prev[deviceId].eeprom,
+          [key]: value
+        }
+      };
+      
+      // Special case: if we change design_cap, update capacityAh
+      if (key === 'design_cap') {
+        updated.capacityAh = Number(value) / 100;
+      }
+      
+      globalRealTimeData[deviceId] = updated;
+      return { ...prev, [deviceId]: updated };
+    });
+  }, []);
+
   const getAggregatedData = () => {
     const activeData = Object.values(realTimeData);
     if (activeData.length === 0) return null;
 
     return {
-      totalVoltage: activeData.reduce((acc, curr) => acc + curr.totalVoltage, 0) / activeData.length, // Average for parallel
-      totalCurrent: activeData.reduce((acc, curr) => acc + curr.totalCurrent, 0), // Sum for parallel
+      totalVoltage: activeData.reduce((acc, curr) => acc + curr.totalVoltage, 0) / activeData.length,
+      totalCurrent: activeData.reduce((acc, curr) => acc + curr.totalCurrent, 0),
       avgSoC: activeData.reduce((acc, curr) => acc + curr.stateOfCharge, 0) / activeData.length,
       deviceCount: activeData.length,
       totalPower: activeData.reduce((acc, curr) => acc + (curr.totalVoltage * curr.totalCurrent), 0)
@@ -70,5 +143,6 @@ export function useBmsStore() {
     aggregated: getAggregatedData(),
     isDemoMode,
     setIsDemoMode,
+    updateEeprom,
   };
 }
