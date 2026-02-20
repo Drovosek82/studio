@@ -8,19 +8,21 @@ import { CellGrid } from "@/components/bms/cell-grid";
 import { HistoryCharts } from "@/components/bms/history-charts";
 import { AiAnalysis } from "@/components/bms/ai-analysis";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { 
   ArrowLeft, 
   Settings2, 
-  LayoutDashboard,
-  ShieldCheck,
-  Thermometer,
+  Info,
+  Power,
   Zap,
-  Info
+  Activity,
+  ShieldAlert
 } from "lucide-react";
 
 export default function BatteryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { allData, history } = useBmsStore();
+  const { allData, history, toggleControl } = useBmsStore();
   const data = allData[id];
   const activeHistory = history[id] || [];
 
@@ -71,6 +73,65 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
              <HistoryCharts history={activeHistory} />
           </div>
           <div className="space-y-6">
+             {/* Device Control Card */}
+             <div className="glass-card p-6 rounded-xl space-y-6">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Power className="h-5 w-5 text-accent" />
+                  Керування пристроєм
+                </h3>
+                
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Zap className={`h-4 w-4 ${data.isChargeEnabled ? 'text-green-500' : 'text-muted-foreground'}`} />
+                        MOSFET Заряду
+                      </Label>
+                      <p className="text-[10px] text-muted-foreground">Дозвіл на приймання енергії</p>
+                    </div>
+                    <Switch 
+                      checked={data.isChargeEnabled} 
+                      onCheckedChange={() => toggleControl(id, 'isChargeEnabled')}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Power className={`h-4 w-4 ${data.isDischargeEnabled ? 'text-green-500' : 'text-muted-foreground'}`} />
+                        MOSFET Розряду
+                      </Label>
+                      <p className="text-[10px] text-muted-foreground">Дозвіл на видачу енергії</p>
+                    </div>
+                    <Switch 
+                      checked={data.isDischargeEnabled} 
+                      onCheckedChange={() => toggleControl(id, 'isDischargeEnabled')}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Activity className={`h-4 w-4 ${data.isBalancingActive ? 'text-accent' : 'text-muted-foreground'}`} />
+                        Балансування
+                      </Label>
+                      <p className="text-[10px] text-muted-foreground">Вирівнювання напруги комірок</p>
+                    </div>
+                    <Switch 
+                      checked={data.isBalancingActive} 
+                      onCheckedChange={() => toggleControl(id, 'isBalancingActive')}
+                    />
+                  </div>
+                </div>
+
+                {!data.isChargeEnabled && !data.isDischargeEnabled && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-2">
+                    <ShieldAlert className="h-4 w-4 text-red-500 mt-0.5" />
+                    <p className="text-[10px] text-red-400">Всі виходи заблоковано. Батарея повністю ізольована від навантаження та зарядного пристрою.</p>
+                  </div>
+                )}
+             </div>
+
              <AiAnalysis currentData={data} history={activeHistory} />
              
              <div className="glass-card p-6 rounded-xl space-y-4">
@@ -81,19 +142,25 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Балансування:</span>
-                    <span className="text-accent font-medium">Активне (Комірки 2, 4, 8)</span>
+                    <span className={data.isBalancingActive ? "text-accent font-medium" : "text-muted-foreground"}>
+                      {data.isBalancingActive ? "Активне (Комірки 2, 4, 8)" : "Вимкнено"}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">MOSFET Заряду:</span>
-                    <span className="text-green-500 font-medium">УВІМК</span>
+                    <span className={data.isChargeEnabled ? "text-green-500 font-medium" : "text-red-500 font-medium"}>
+                      {data.isChargeEnabled ? "УВІМК" : "ВИМК"}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">MOSFET Розряду:</span>
-                    <span className="text-green-500 font-medium">УВІМК</span>
+                    <span className={data.isDischargeEnabled ? "text-green-500 font-medium" : "text-red-500 font-medium"}>
+                      {data.isDischargeEnabled ? "УВІМК" : "ВИМК"}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Циклів:</span>
-                    <span className="text-white font-medium">42</span>
+                    <span className="text-white font-medium">{data.cycleCount}</span>
                   </div>
                 </div>
              </div>

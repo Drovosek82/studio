@@ -10,6 +10,9 @@ export interface BatteryData {
   lastUpdated: string;
   capacityAh: number;
   cycleCount: number;
+  isChargeEnabled: boolean;
+  isDischargeEnabled: boolean;
+  isBalancingActive: boolean;
   eeprom: Record<string, number | string>;
 }
 

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -39,6 +38,9 @@ export function useBmsStore() {
           lastUpdated: new Date().toISOString(),
           capacityAh: 100,
           cycleCount: 42,
+          isChargeEnabled: true,
+          isDischargeEnabled: true,
+          isBalancingActive: false,
           eeprom: {
             // Capacity & SOC
             design_cap: 10000,
@@ -78,7 +80,7 @@ export function useBmsStore() {
             cell_cnt: 14,
             func_config: 0x0001,
             ntc_config: 0x0003,
-            // Calibration (Demo init)
+            // Calibration
             cell_cal_1: 3740,
             cell_cal_2: 3740,
             cell_cal_3: 3740,
@@ -129,13 +131,12 @@ export function useBmsStore() {
           
           newData[id] = {
             ...item,
-            totalCurrent: Math.max(0, item.totalCurrent + currentVariation),
+            totalCurrent: item.isDischargeEnabled ? Math.max(0, item.totalCurrent + currentVariation) : 0,
             totalVoltage: item.totalVoltage + voltageVariation,
             stateOfCharge: Math.min(100, Math.max(0, item.stateOfCharge - (item.totalCurrent > 0 ? 0.001 : -0.001))),
             lastUpdated: new Date().toISOString()
           };
           
-          // Update global state too
           globalRealTimeData[id] = newData[id];
         });
         return newData;
@@ -155,12 +156,21 @@ export function useBmsStore() {
           [key]: value
         }
       };
-      
-      // Special case: if we change design_cap, update capacityAh
       if (key === 'design_cap') {
         updated.capacityAh = Number(value) / 100;
       }
-      
+      globalRealTimeData[deviceId] = updated;
+      return { ...prev, [deviceId]: updated };
+    });
+  }, []);
+
+  const toggleControl = useCallback((deviceId: string, field: 'isChargeEnabled' | 'isDischargeEnabled' | 'isBalancingActive') => {
+    setRealTimeData(prev => {
+      if (!prev[deviceId]) return prev;
+      const updated = {
+        ...prev[deviceId],
+        [field]: !prev[deviceId][field]
+      };
       globalRealTimeData[deviceId] = updated;
       return { ...prev, [deviceId]: updated };
     });
@@ -191,5 +201,6 @@ export function useBmsStore() {
     isDemoMode,
     setIsDemoMode,
     updateEeprom,
+    toggleControl
   };
 }
