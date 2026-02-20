@@ -3,6 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import { BatteryData, HistoricalRecord, BatteryDevice } from './types';
+import { Language, translations } from './translations';
 import { 
   useUser, 
   useFirestore, 
@@ -23,6 +24,9 @@ interface BmsContextType {
   isDemoMode: boolean;
   isLoading: boolean;
   localHubIp: string;
+  lang: Language;
+  setLang: (l: Language) => void;
+  t: (key: keyof typeof translations.uk) => string;
   setLocalHubIp: (ip: string) => void;
   setDemoMode: (val: boolean) => void;
   toggleControl: (deviceId: string, field: string) => void;
@@ -46,7 +50,7 @@ const createMockBatteryData = (id: string, name: string, isReal: boolean = false
   totalCurrent: 0,
   temperatures: isReal ? [22, 23] : [25.0, 26.2, 24.8],
   stateOfCharge: isReal ? 0 : 85,
-  protectionStatus: isReal ? 'Normal' : 'Нормально',
+  protectionStatus: isReal ? 'Normal' : 'Normal',
   cellVoltages: Array(14).fill(0).map(() => isReal ? 3.721 : 3.742 + (Math.random() - 0.5) * 0.01),
   balancingCells: Array(14).fill(false),
   lastUpdated: new Date().toISOString(),
@@ -88,6 +92,7 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
   const db = useFirestore();
   const [isDemoMode, setIsDemoModeState] = useState(false);
   const [localHubIp, setLocalHubIp] = useState('');
+  const [lang, setLang] = useState<Language>('uk');
   
   const [demoDevices, setDemoDevices] = useState<BatteryDevice[]>([]);
   const [demoData, setDemoData] = useState<Record<string, BatteryData>>({});
@@ -101,19 +106,21 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
   
   const [pendingDevices, setPendingDevices] = useState<Record<string, BatteryData>>({});
 
+  const t = useCallback((key: keyof typeof translations.uk) => {
+    return translations[lang][key] || key;
+  }, [lang]);
+
   useEffect(() => {
     if (!user && !isUserLoading && auth) {
       initiateAnonymousSignIn(auth);
     }
   }, [user, isUserLoading, auth]);
 
-  // Отримання даних з Firebase
   const devicesRef = useMemoFirebase(() => 
     user && db ? collection(db, 'users', user.uid, 'bmsDevices') : null, 
   [user, db]);
   const { data: fbDevices, isLoading: isFbLoading } = useCollection<any>(devicesRef);
 
-  // Опитування локального Хаба
   useEffect(() => {
     if (!localHubIp) return;
 
@@ -149,7 +156,6 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     return () => clearInterval(interval);
   }, [localHubIp]);
 
-  // Обчислення всіх даних - дозволяємо прямі підключення навіть у демо
   const allData = useMemo(() => {
     const combined: Record<string, BatteryData> = { 
       ...directData, 
@@ -167,7 +173,6 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     return combined;
   }, [isDemoMode, demoData, directData, hubData, pendingDevices, fbDevices]);
 
-  // Обчислення списку пристроїв
   const devices = useMemo(() => {
     const fromFb = (!isDemoMode && fbDevices) ? fbDevices.map(d => ({ 
       id: d.id, 
@@ -376,6 +381,9 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     isDemoMode,
     isLoading: isUserLoading || (!isDemoMode && isFbLoading),
     localHubIp,
+    lang,
+    setLang,
+    t,
     setLocalHubIp,
     setDemoMode: setIsDemoModeState,
     toggleControl,
