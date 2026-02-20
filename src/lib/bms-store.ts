@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -29,7 +30,7 @@ export function useBmsStore() {
           name: dev.name,
           totalVoltage: 52.4,
           totalCurrent: 2.5,
-          temperatures: [25.0, 26.2, 24.8], // 3 датчики за замовчуванням
+          temperatures: [25.0, 26.2, 24.8],
           stateOfCharge: 85,
           protectionStatus: 'Нормально',
           cellVoltages: Array(14).fill(0).map(() => 3.742 + (Math.random() - 0.5) * 0.01),
@@ -61,6 +62,7 @@ export function useBmsStore() {
             bal_window: 50,
             shunt_res: 100,
             cell_cnt: 14,
+            ntc_cnt: 3,
           }
         };
 
@@ -96,8 +98,15 @@ export function useBmsStore() {
             balancingCells = item.cellVoltages.map(v => v > maxV - 0.005);
           }
 
-          // Симуляція температур
-          const newTemps = item.temperatures.map(t => t + (Math.random() - 0.5) * 0.2);
+          // Коригуємо кількість датчиків температури згідно з EEPROM
+          const ntcCount = Number(item.eeprom.ntc_cnt) || 3;
+          let newTemps = [...item.temperatures];
+          
+          if (newTemps.length !== ntcCount) {
+            newTemps = Array(ntcCount).fill(25.0).map(t => t + (Math.random() - 0.5) * 5);
+          } else {
+            newTemps = newTemps.map(t => t + (Math.random() - 0.5) * 0.2);
+          }
 
           newData[id] = {
             ...item,

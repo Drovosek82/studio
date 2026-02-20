@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useState, useEffect } from "react";
@@ -201,6 +202,18 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
                   <Label>DSGUT (Discharge Under Temp)</Label>
                   <Input value={localSettings.dsgut || ""} onChange={(e) => handleInputChange('dsgut', e.target.value)} className="bg-secondary/30" />
                   <p className="text-[10px] text-muted-foreground">Мінімальна температура розрядки. 2531 = -20°C.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Number of NTC Sensors (0x2E)</Label>
+                  <Input 
+                    type="number"
+                    min="1"
+                    max="8"
+                    value={localSettings.ntc_cnt || "3"} 
+                    onChange={(e) => handleInputChange('ntc_cnt', e.target.value)} 
+                    className="bg-secondary/30" 
+                  />
+                  <p className="text-[10px] text-muted-foreground">Кількість активних датчиків температури (від 1 до 8).</p>
                 </div>
               </CardContent>
             </Card>
