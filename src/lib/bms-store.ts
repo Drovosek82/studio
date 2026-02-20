@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BatteryData, HistoricalRecord, BatteryDevice } from './types';
 
-// Початкові демо-дані для ініціалізації
+// Початкові демо-дані
 const DEMO_DEVICES: BatteryDevice[] = [
   { id: 'BMS_01', name: 'Battery Pack A', type: 'ESP32', status: 'Online' },
   { id: 'BMS_02', name: 'Battery Pack B', type: 'ESP32', status: 'Online' }
@@ -27,7 +27,6 @@ export function useBmsStore() {
     setIsDemoModeState(val);
     
     if (!val) {
-      // Очищаємо всі дані при вимкненні демо
       globalDevices = [];
       globalRealTimeData = {};
       globalHistory = {};
@@ -35,7 +34,6 @@ export function useBmsStore() {
       setRealTimeData({});
       setHistory({});
     } else {
-      // Повертаємо демо-дані при увімкненні
       globalDevices = [...DEMO_DEVICES];
       setDevices(globalDevices);
       initializeDemoData();
@@ -47,75 +45,8 @@ export function useBmsStore() {
     const initialHistory: Record<string, HistoricalRecord[]> = {};
 
     DEMO_DEVICES.forEach(dev => {
-      initialData[dev.id] = {
-        id: dev.id,
-        name: dev.name,
-        totalVoltage: 52.4,
-        totalCurrent: 2.5,
-        temperatures: [25.0, 26.2, 24.8],
-        stateOfCharge: 85,
-        protectionStatus: 'Нормально',
-        cellVoltages: Array(14).fill(0).map(() => 3.742 + (Math.random() - 0.5) * 0.01),
-        balancingCells: Array(14).fill(false),
-        lastUpdated: new Date().toISOString(),
-        capacityAh: 100,
-        cycleCount: 42,
-        isChargeEnabled: true,
-        isDischargeEnabled: true,
-        isBalancingActive: false,
-        balancingMode: 'charge',
-        eeprom: {
-          design_cap: 10000,
-          cycle_cap: 10000,
-          cap_100: 4150,
-          cap_80: 4000,
-          cap_60: 3850,
-          cap_40: 3750,
-          cap_20: 3600,
-          cap_0: 3000,
-          dsg_rate: 10,
-          covp: 4250,
-          covp_rel: 4150,
-          cuvp: 2700,
-          cuvp_rel: 3000,
-          povp: 5880,
-          povp_rel: 5600,
-          puvp: 4200,
-          puvp_rel: 4500,
-          chgot: 3231,
-          chgot_rel: 3181,
-          chgut: 2731,
-          chgut_rel: 2781,
-          dsgot: 3381,
-          dsgot_rel: 3331,
-          dsgut: 2531,
-          dsgut_rel: 2581,
-          cell_v_delays: 2,
-          pack_v_delays: 2,
-          chg_t_delays: 2,
-          dsg_t_delays: 2,
-          chgoc: 5000,
-          dsgoc: 10000,
-          chgoc_delays: 5,
-          dsgoc_delays: 5,
-          bal_start: 3400,
-          bal_window: 50,
-          shunt_res: 100,
-          cell_cnt: 14,
-          ntc_cnt: 3,
-          mfg_name: "JBD-BMS",
-          device_name: "Smart-BMS-01",
-          serial_num: "20240501-A",
-          mfg_date: "2024-05-01"
-        }
-      };
-
-      initialHistory[dev.id] = Array(50).fill(0).map((_, i) => ({
-        timestamp: new Date(Date.now() - (50 - i) * 60000).toISOString(),
-        totalVoltage: 52.0 + Math.random() * 0.8,
-        totalCurrent: 1.0 + Math.random() * 5,
-        stateOfCharge: 80 + (i / 50) * 5,
-      }));
+      initialData[dev.id] = createMockBatteryData(dev.id, dev.name);
+      initialHistory[dev.id] = createMockHistory(dev.id);
     });
 
     globalRealTimeData = initialData;
@@ -123,6 +54,72 @@ export function useBmsStore() {
     setRealTimeData({ ...initialData });
     setHistory({ ...initialHistory });
   };
+
+  const createMockBatteryData = (id: string, name: string): BatteryData => ({
+    id,
+    name,
+    totalVoltage: 52.4,
+    totalCurrent: 2.5,
+    temperatures: [25.0, 26.2, 24.8],
+    stateOfCharge: 85,
+    protectionStatus: 'Нормально',
+    cellVoltages: Array(14).fill(0).map(() => 3.742 + (Math.random() - 0.5) * 0.01),
+    balancingCells: Array(14).fill(false),
+    lastUpdated: new Date().toISOString(),
+    capacityAh: 100,
+    cycleCount: 42,
+    isChargeEnabled: true,
+    isDischargeEnabled: true,
+    isBalancingActive: false,
+    balancingMode: 'charge',
+    eeprom: {
+      design_cap: 10000,
+      ntc_cnt: 3,
+      cell_cnt: 14,
+      bal_start: 3400,
+      bal_window: 50,
+      shunt_res: 100
+    }
+  });
+
+  const createMockHistory = (id: string): HistoricalRecord[] => 
+    Array(50).fill(0).map((_, i) => ({
+      timestamp: new Date(Date.now() - (50 - i) * 60000).toISOString(),
+      totalVoltage: 52.0 + Math.random() * 0.8,
+      totalCurrent: 1.0 + Math.random() * 5,
+      stateOfCharge: 80 + (i / 50) * 5,
+    }));
+
+  const addNetworkDevice = useCallback((name: string) => {
+    const id = `ESP32_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+    const newDevice: BatteryDevice = { id, name, type: 'ESP32', status: 'Online' };
+    
+    globalDevices = [...globalDevices, newDevice];
+    globalRealTimeData[id] = createMockBatteryData(id, name);
+    globalHistory[id] = createMockHistory(id);
+    
+    setDevices([...globalDevices]);
+    setRealTimeData({ ...globalRealTimeData });
+    setHistory({ ...globalHistory });
+    return id;
+  }, []);
+
+  const addDirectBluetoothDevice = useCallback((name: string) => {
+    // Видаляємо попередні Direct Bluetooth підключення, бо воно може бути лише одне
+    globalDevices = globalDevices.filter(d => d.type !== 'Bluetooth');
+    
+    const id = `BLE_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+    const newDevice: BatteryDevice = { id, name, type: 'Bluetooth', status: 'Online' };
+    
+    globalDevices = [newDevice, ...globalDevices];
+    globalRealTimeData[id] = createMockBatteryData(id, name);
+    globalHistory[id] = createMockHistory(id);
+    
+    setDevices([...globalDevices]);
+    setRealTimeData({ ...globalRealTimeData });
+    setHistory({ ...globalHistory });
+    return id;
+  }, []);
 
   useEffect(() => {
     if (isDemoMode && Object.keys(globalRealTimeData).length === 0) {
@@ -150,13 +147,9 @@ export function useBmsStore() {
           }
 
           const ntcCount = Number(item.eeprom.ntc_cnt) || 3;
-          let newTemps = [...item.temperatures];
-          
-          if (newTemps.length !== ntcCount) {
-            newTemps = Array(ntcCount).fill(25.0).map(t => t + (Math.random() - 0.5) * 5);
-          } else {
-            newTemps = newTemps.map(t => t + (Math.random() - 0.5) * 0.2);
-          }
+          let newTemps = Array(ntcCount).fill(25.0).map((t, idx) => 
+            (item.temperatures[idx] || 25.0) + (Math.random() - 0.5) * 0.2
+          );
 
           newData[id] = {
             ...item,
@@ -208,14 +201,20 @@ export function useBmsStore() {
   }, []);
 
   const getAggregatedData = () => {
-    const activeData = Object.values(realTimeData);
-    if (activeData.length === 0) return null;
+    // Агрегуємо тільки ESP32 пристрої
+    const networkData = devices
+      .filter(d => d.type === 'ESP32')
+      .map(d => realTimeData[d.id])
+      .filter(Boolean);
+
+    if (networkData.length === 0) return null;
+    
     return {
-      totalVoltage: activeData.reduce((acc, curr) => acc + curr.totalVoltage, 0) / activeData.length,
-      totalCurrent: activeData.reduce((acc, curr) => acc + curr.totalCurrent, 0),
-      avgSoC: activeData.reduce((acc, curr) => acc + curr.stateOfCharge, 0) / activeData.length,
-      deviceCount: activeData.length,
-      totalPower: activeData.reduce((acc, curr) => acc + (curr.totalVoltage * curr.totalCurrent), 0)
+      totalVoltage: networkData.reduce((acc, curr) => acc + curr.totalVoltage, 0) / networkData.length,
+      totalCurrent: networkData.reduce((acc, curr) => acc + curr.totalCurrent, 0),
+      avgSoC: networkData.reduce((acc, curr) => acc + curr.stateOfCharge, 0) / networkData.length,
+      deviceCount: networkData.length,
+      totalPower: networkData.reduce((acc, curr) => acc + (curr.totalVoltage * curr.totalCurrent), 0)
     };
   };
 
@@ -230,6 +229,8 @@ export function useBmsStore() {
     setDemoMode,
     updateEeprom,
     toggleControl,
-    setBalancingMode
+    setBalancingMode,
+    addNetworkDevice,
+    addDirectBluetoothDevice
   };
 }

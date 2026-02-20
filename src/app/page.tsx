@@ -3,8 +3,6 @@
 
 import Link from "next/link";
 import { useBmsStore } from "@/lib/bms-store";
-import { DashboardHeader } from "@/components/bms/dashboard-header";
-import { FirmwareWizard } from "@/components/bms/firmware-wizard";
 import { BluetoothConnector } from "@/components/bms/bluetooth-connector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -19,9 +17,10 @@ import {
   CircleDot,
   Battery,
   ChevronRight,
-  Zap,
-  MonitorPlay
+  MonitorPlay,
+  Cpu
 } from "lucide-react";
+import { FirmwareWizard } from "@/components/bms/firmware-wizard";
 
 export default function Home() {
   const { aggregated, devices, allData, isDemoMode, setDemoMode } = useBmsStore();
@@ -47,7 +46,7 @@ export default function Home() {
               </Badge>
             )}
             <div className="text-xs text-muted-foreground hidden sm:block">
-              v1.2.0 | Multi-Unit
+              v1.5.0 | Multi-Source
             </div>
           </div>
         </div>
@@ -56,97 +55,127 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 pt-8">
         <Tabs defaultValue="aggregated" className="w-full">
           <TabsList className="grid w-full grid-cols-3 md:w-[600px] mb-8 bg-secondary/40 h-12">
-            <TabsTrigger value="aggregated" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
-              <LayoutDashboard className="h-4 w-4" />
-              Загальний стан
+            <TabsTrigger value="aggregated" className="gap-2">
+              <LayoutDashboard className="h-4 w-4" /> Дашборд
             </TabsTrigger>
-            <TabsTrigger value="connect" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
-              <Bluetooth className="h-4 w-4" />
-              Підключення
+            <TabsTrigger value="connect" className="gap-2">
+              <Bluetooth className="h-4 w-4" /> Підключення
             </TabsTrigger>
-            <TabsTrigger value="settings" className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
-              <Settings className="h-4 w-4" />
-              Налаштування
+            <TabsTrigger value="settings" className="gap-2">
+              <Settings className="h-4 w-4" /> Налаштування
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="aggregated" className="space-y-6">
-            {/* Aggregated Summary Cards */}
-            {aggregated && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <Card className="glass-card border-none">
-                  <CardContent className="p-6">
-                    <p className="text-muted-foreground text-sm font-medium">Середня напруга</p>
-                    <h3 className="text-3xl font-bold mt-1 text-accent">{aggregated.totalVoltage.toFixed(2)} V</h3>
-                  </CardContent>
-                </Card>
-                <Card className="glass-card border-none">
-                  <CardContent className="p-6">
-                    <p className="text-muted-foreground text-sm font-medium">Сумарний струм</p>
-                    <h3 className="text-3xl font-bold mt-1 text-accent">{aggregated.totalCurrent.toFixed(1)} A</h3>
-                  </CardContent>
-                </Card>
-                <Card className="glass-card border-none">
-                  <CardContent className="p-6">
-                    <p className="text-muted-foreground text-sm font-medium">Загальна потужність</p>
-                    <h3 className="text-3xl font-bold mt-1 text-accent">{(aggregated.totalPower / 1000).toFixed(2)} kW</h3>
-                  </CardContent>
-                </Card>
-                <Card className="glass-card border-none">
-                  <CardContent className="p-6">
-                    <p className="text-muted-foreground text-sm font-medium">Середній SoC</p>
-                    <h3 className="text-3xl font-bold mt-1 text-accent">{aggregated.avgSoC.toFixed(1)} %</h3>
-                  </CardContent>
-                </Card>
+            {aggregated ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                  <Card className="glass-card border-none">
+                    <CardContent className="p-6">
+                      <p className="text-muted-foreground text-sm font-medium">Середня напруга</p>
+                      <h3 className="text-3xl font-bold mt-1 text-accent">{aggregated.totalVoltage.toFixed(2)} V</h3>
+                      <p className="text-[10px] text-muted-foreground mt-2">База: {aggregated.deviceCount} ESP32</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="glass-card border-none">
+                    <CardContent className="p-6">
+                      <p className="text-muted-foreground text-sm font-medium">Сумарний струм</p>
+                      <h3 className="text-3xl font-bold mt-1 text-accent">{aggregated.totalCurrent.toFixed(1)} A</h3>
+                    </CardContent>
+                  </Card>
+                  <Card className="glass-card border-none">
+                    <CardContent className="p-6">
+                      <p className="text-muted-foreground text-sm font-medium">Загальна потужність</p>
+                      <h3 className="text-3xl font-bold mt-1 text-accent">{(aggregated.totalPower / 1000).toFixed(2)} kW</h3>
+                    </CardContent>
+                  </Card>
+                  <Card className="glass-card border-none">
+                    <CardContent className="p-6">
+                      <p className="text-muted-foreground text-sm font-medium">Середній SoC</p>
+                      <h3 className="text-3xl font-bold mt-1 text-accent">{aggregated.avgSoC.toFixed(1)} %</h3>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="space-y-4">
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    <Cpu className="h-5 w-5 text-accent" />
+                    Мережеві пристрої (ESP32)
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {devices.filter(d => d.type === 'ESP32').map((device) => {
+                      const data = allData[device.id];
+                      return (
+                        <Link key={device.id} href={`/battery/${device.id}`}>
+                          <Card className="glass-card border-none hover:bg-accent/10 transition-colors cursor-pointer group">
+                            <CardContent className="p-6 flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="p-3 bg-secondary/50 rounded-lg text-accent">
+                                  <Cpu className="h-6 w-6" />
+                                </div>
+                                <div>
+                                  <h4 className="font-bold">{device.name}</h4>
+                                  <p className="text-xs text-muted-foreground">{device.status}</p>
+                                </div>
+                              </div>
+                              {data && (
+                                <div className="flex items-center gap-6">
+                                  <div className="text-right hidden sm:block">
+                                    <p className="text-xs text-muted-foreground">V / A</p>
+                                    <p className="font-code text-accent">{data.totalVoltage.toFixed(2)} / {data.totalCurrent.toFixed(1)}</p>
+                                  </div>
+                                  <Badge variant="outline" className="border-accent text-accent">{data.stateOfCharge.toFixed(0)}%</Badge>
+                                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-accent transition-colors" />
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-20 bg-secondary/10 rounded-2xl border border-dashed border-border">
+                <Cpu className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-20" />
+                <h3 className="text-xl font-bold">Немає мережевих даних</h3>
+                <p className="text-sm text-muted-foreground mt-2">Додайте ESP32 пристрої у вкладці "Підключення" для агрегації</p>
               </div>
             )}
 
-            <div className="space-y-4">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Battery className="h-5 w-5 text-accent" />
-                Список підключених батарей
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {devices.map((device) => {
-                  const data = allData[device.id];
-                  return (
-                    <Link key={device.id} href={`/battery/${device.id}`}>
-                      <Card className="glass-card border-none hover:bg-accent/10 transition-colors cursor-pointer group">
-                        <CardContent className="p-6 flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="p-3 bg-secondary/50 rounded-lg text-accent">
-                              <Battery className="h-6 w-6" />
-                            </div>
-                            <div>
-                              <h4 className="font-bold">{device.name}</h4>
-                              <p className="text-xs text-muted-foreground">ID: {device.id} | {device.status}</p>
-                            </div>
-                          </div>
-                          {data && (
-                            <div className="flex items-center gap-6">
-                              <div className="text-right hidden sm:block">
-                                <p className="text-xs text-muted-foreground">Напруга / Струм</p>
-                                <p className="font-code text-accent">{data.totalVoltage.toFixed(2)}V / {data.totalCurrent.toFixed(1)}A</p>
+            {/* Direct Connections Section */}
+            {devices.some(d => d.type === 'Bluetooth') && (
+              <div className="mt-12 space-y-4">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Bluetooth className="h-5 w-5 text-accent" />
+                  Прямі підключення (Direct BLE)
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {devices.filter(d => d.type === 'Bluetooth').map((device) => {
+                    const data = allData[device.id];
+                    return (
+                      <Link key={device.id} href={`/battery/${device.id}`}>
+                        <Card className="glass-card border-none hover:bg-blue-500/10 transition-colors cursor-pointer group border-l-2 border-l-blue-500">
+                          <CardContent className="p-6 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="p-3 bg-blue-500/10 rounded-lg text-blue-500">
+                                <Bluetooth className="h-6 w-6" />
                               </div>
-                              <div className="w-12 h-12 rounded-full border-2 border-accent/20 flex items-center justify-center relative">
-                                <span className="text-[10px] font-bold">{data.stateOfCharge.toFixed(0)}%</span>
+                              <div>
+                                <h4 className="font-bold">{device.name}</h4>
+                                <Badge variant="secondary" className="text-[8px] uppercase">Service Mode</Badge>
                               </div>
-                              <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-accent transition-colors" />
                             </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  );
-                })}
+                            <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-accent transition-colors" />
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-
-            <div className="mt-8 p-4 bg-secondary/20 rounded-lg border border-border/50 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Всього підключено: <span className="text-accent font-bold">{devices.length} BMS</span>
-                </p>
-            </div>
+            )}
           </TabsContent>
 
           <TabsContent value="connect" className="space-y-6 max-w-4xl mx-auto">
@@ -160,22 +189,15 @@ export default function Home() {
                   <MonitorPlay className="h-5 w-5 text-accent" />
                   <CardTitle>Симуляція системи</CardTitle>
                 </div>
-                <CardDescription>
-                  Керуйте режимом демонстрації для тестування інтерфейсу
-                </CardDescription>
+                <CardDescription>Керуйте демонстраційним режимом</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg border border-border/50">
                   <div className="space-y-0.5">
                     <Label className="text-base">Демо-режим</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Автоматична генерація випадкових даних для візуалізації
-                    </p>
+                    <p className="text-xs text-muted-foreground">Автоматична генерація даних для тестування</p>
                   </div>
-                  <Switch 
-                    checked={isDemoMode} 
-                    onCheckedChange={setDemoMode}
-                  />
+                  <Switch checked={isDemoMode} onCheckedChange={setDemoMode} />
                 </div>
               </CardContent>
             </Card>
@@ -184,10 +206,6 @@ export default function Home() {
           </TabsContent>
         </Tabs>
       </div>
-
-      <footer className="mt-20 border-t border-border/50 py-8 text-center text-xs text-muted-foreground">
-        <p>© 2024 BMS Central Monitor. Спроектовано для паралельних систем JBD BMS.</p>
-      </footer>
     </main>
   );
 }

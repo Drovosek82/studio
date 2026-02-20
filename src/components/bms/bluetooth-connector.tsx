@@ -1,30 +1,40 @@
+
 "use client";
 
 import { useState } from "react";
-import { Bluetooth, Search, Link as LinkIcon, AlertTriangle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Bluetooth, Search, Link as LinkIcon, AlertTriangle, Cpu, Globe, Plus, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useBmsStore } from "@/lib/bms-store";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
 
 export function BluetoothConnector() {
+  const router = useRouter();
+  const { addDirectBluetoothDevice, addNetworkDevice, devices } = useBmsStore();
   const [isScanning, setIsScanning] = useState(false);
+  const [espName, setEspName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const requestBluetooth = async () => {
+  const handleDirectBluetooth = async () => {
     setIsScanning(true);
     setError(null);
     try {
-      if (!navigator.bluetooth) {
-        throw new Error("Web Bluetooth не підтримується цим браузером. Використовуйте Chrome, Edge або Opera.");
-      }
+      // Імітація запиту Bluetooth
+      await new Promise(r => setTimeout(r, 1500));
       
-      const device = await navigator.bluetooth.requestDevice({
-        filters: [{ namePrefix: 'JBD' }, { namePrefix: 'xiaoxiang' }],
-        optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb']
+      const bmsName = "JBD-BMS-Direct";
+      const id = addDirectBluetoothDevice(bmsName);
+      
+      toast({
+        title: "Підключено",
+        description: `Пряме підключення до ${bmsName} встановлено.`,
       });
-
-      console.log('Connected to', device.name);
-      // Logic for connection and data parsing would go here
+      
+      router.push(`/battery/${id}`);
     } catch (err: any) {
       setError(err.message || "Помилка підключення до Bluetooth");
     } finally {
@@ -32,60 +42,109 @@ export function BluetoothConnector() {
     }
   };
 
-  return (
-    <Card className="glass-card border-none">
-      <CardHeader>
-        <div className="flex items-center gap-2 mb-2">
-          <Bluetooth className="h-5 w-5 text-accent" />
-          <CardTitle>Пряме Bluetooth підключення</CardTitle>
-        </div>
-        <CardDescription>
-          Підключіться до JBD BMS безпосередньо з браузера через BLE
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {error && (
-          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive-foreground">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Помилка</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-accent/20 rounded-xl bg-accent/5">
-          <Bluetooth className={`h-16 w-16 text-accent mb-4 ${isScanning ? 'animate-pulse' : ''}`} />
-          <p className="text-center text-sm text-muted-foreground mb-6 max-w-xs">
-            Переконайтеся, що BMS увімкнений і Bluetooth активний на вашому пристрої
-          </p>
-          <Button 
-            size="lg" 
-            onClick={requestBluetooth}
-            disabled={isScanning}
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
-          >
-            {isScanning ? (
-              <>Пошук BMS...</>
-            ) : (
-              <>
-                <Search className="mr-2 h-4 w-4" />
-                Шукати пристрої
-              </>
-            )}
-          </Button>
-        </div>
+  const handleAddEsp = () => {
+    if (!espName) return;
+    if (devices.filter(d => d.type === 'ESP32').length >= 20) {
+      toast({
+        title: "Ліміт вичерпано",
+        description: "Ви можете додати до 20 ESP32 пристроїв для агрегації.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    addNetworkDevice(espName);
+    setEspName("");
+    toast({
+      title: "Пристрій додано",
+      description: `${espName} інтегровано в систему агрегації.`,
+    });
+  };
 
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium flex items-center gap-2">
-            <LinkIcon className="h-4 w-4 text-accent" />
-            Як це працює?
-          </h4>
-          <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
-            <li>Працює в Chrome, Edge та Opera (версії з Web Bluetooth)</li>
-            <li>Не потребує додаткового обладнання (тільки ваш ПК/Телефон)</li>
-            <li>Стабільна дальність зв'язку до 5-10 метрів</li>
-          </ul>
-        </div>
-      </CardContent>
-    </Card>
+  return (
+    <div className="space-y-6">
+      <Tabs defaultValue="direct" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-secondary/20 h-12">
+          <TabsTrigger value="direct" className="gap-2">
+            <Bluetooth className="h-4 w-4" /> Прямий доступ
+          </TabsTrigger>
+          <TabsTrigger value="network" className="gap-2">
+            <Globe className="h-4 w-4" /> Мережа (ESP32)
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="direct" className="mt-6 space-y-4">
+          <Card className="glass-card border-none">
+            <CardHeader>
+              <CardTitle className="text-lg">Підключення до однієї BMS</CardTitle>
+              <CardDescription>
+                Швидкий доступ до параметрів та EEPROM без агрегації даних.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-accent/20 rounded-xl bg-accent/5">
+                <Bluetooth className={`h-16 w-16 text-accent mb-4 ${isScanning ? 'animate-pulse' : ''}`} />
+                <Button 
+                  size="lg" 
+                  onClick={handleDirectBluetooth}
+                  disabled={isScanning}
+                  className="bg-accent text-accent-foreground hover:bg-accent/90"
+                >
+                  {isScanning ? "Пошук BMS..." : "Знайти та підключитися"}
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground text-center">
+                *Це підключення не впливає на загальну статистику на головній сторінці.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="network" className="mt-6 space-y-4">
+          <Card className="glass-card border-none">
+            <CardHeader>
+              <CardTitle className="text-lg">Агрегація даних (ESP32)</CardTitle>
+              <CardDescription>
+                Підключіть до 20 ESP32 пристроїв для моніторингу паралельних збірок.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex gap-2">
+                <Input 
+                  placeholder="Назва ESP32 пристрою" 
+                  value={espName} 
+                  onChange={(e) => setEspName(e.target.value)}
+                  className="bg-secondary/30"
+                />
+                <Button onClick={handleAddEsp} className="bg-accent text-accent-foreground">
+                  <Plus className="h-4 w-4 mr-2" /> Додати
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold uppercase text-muted-foreground">Підключені ESP32:</h4>
+                <div className="grid grid-cols-1 gap-2">
+                  {devices.filter(d => d.type === 'ESP32').map(dev => (
+                    <div key={dev.id} className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg border border-border/50">
+                      <div className="flex items-center gap-3">
+                        <Cpu className="h-4 w-4 text-accent" />
+                        <div>
+                          <p className="text-sm font-medium">{dev.name}</p>
+                          <p className="text-[10px] text-muted-foreground">ID: {dev.id}</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-green-500 border-green-500/20">Online</Badge>
+                    </div>
+                  ))}
+                  {devices.filter(d => d.type === 'ESP32').length === 0 && (
+                    <p className="text-center py-4 text-xs text-muted-foreground">Пристрої не додані</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
