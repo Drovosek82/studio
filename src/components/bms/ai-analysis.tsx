@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Brain, Sparkles, Loader2, Info, AlertCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { analyzeBatteryHealth, AnalyzeBatteryHealthOutput } from "@/ai/flows/analyze-battery-health";
 import { BatteryData, HistoricalRecord } from "@/lib/types";
@@ -25,7 +25,7 @@ export function AiAnalysis({ currentData, history }: AiAnalysisProps) {
         currentData: {
           totalVoltage: currentData.totalVoltage,
           totalCurrent: currentData.totalCurrent,
-          temperature: currentData.temperature,
+          temperatures: currentData.temperatures,
           stateOfCharge: currentData.stateOfCharge,
           protectionStatus: currentData.protectionStatus,
           cellVoltages: currentData.cellVoltages,

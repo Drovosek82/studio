@@ -3,18 +3,18 @@ export interface BatteryData {
   name: string;
   totalVoltage: number;
   totalCurrent: number;
-  temperature: number;
+  temperatures: number[]; // Оновлено: масив температур для декількох NTC
   stateOfCharge: number;
   protectionStatus: string;
   cellVoltages: number[];
-  balancingCells: boolean[]; // Нове: статус балансування для кожної комірки
+  balancingCells: boolean[];
   lastUpdated: string;
   capacityAh: number;
   cycleCount: number;
   isChargeEnabled: boolean;
   isDischargeEnabled: boolean;
   isBalancingActive: boolean;
-  balancingMode: 'charge' | 'always' | 'static'; // Нове: режими JBD
+  balancingMode: 'charge' | 'always' | 'static';
   eeprom: Record<string, number | string>;
 }
 

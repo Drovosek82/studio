@@ -29,7 +29,7 @@ export function useBmsStore() {
           name: dev.name,
           totalVoltage: 52.4,
           totalCurrent: 2.5,
-          temperature: 25.0,
+          temperatures: [25.0, 26.2, 24.8], // 3 датчики за замовчуванням
           stateOfCharge: 85,
           protectionStatus: 'Нормально',
           cellVoltages: Array(14).fill(0).map(() => 3.742 + (Math.random() - 0.5) * 0.01),
@@ -90,12 +90,14 @@ export function useBmsStore() {
           const currentVariation = (Math.random() - 0.5) * 0.5;
           const voltageVariation = (Math.random() - 0.5) * 0.05;
           
-          // Імітація балансування: якщо активне, рандомно вибираємо комірки з найвищою напругою
           let balancingCells = Array(item.cellVoltages.length).fill(false);
           if (item.isBalancingActive) {
             const maxV = Math.max(...item.cellVoltages);
             balancingCells = item.cellVoltages.map(v => v > maxV - 0.005);
           }
+
+          // Симуляція температур
+          const newTemps = item.temperatures.map(t => t + (Math.random() - 0.5) * 0.2);
 
           newData[id] = {
             ...item,
@@ -103,6 +105,7 @@ export function useBmsStore() {
             totalVoltage: item.totalVoltage + voltageVariation,
             stateOfCharge: Math.min(100, Math.max(0, item.stateOfCharge - (item.totalCurrent > 0 ? 0.001 : -0.001))),
             balancingCells,
+            temperatures: newTemps,
             lastUpdated: new Date().toISOString()
           };
           

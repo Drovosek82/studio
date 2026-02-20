@@ -10,7 +10,7 @@ const AnalyzeBatteryHealthInputSchema = z.object({
   currentData: z.object({
     totalVoltage: z.number().describe('Current total voltage in Volts.'),
     totalCurrent: z.number().describe('Current total current in Amperes.'),
-    temperature: z.number().describe('Current battery temperature in Celsius.'),
+    temperatures: z.array(z.number()).describe('Current battery temperatures from all NTC sensors in Celsius.'),
     stateOfCharge: z.number().describe('Current State of Charge in percentage (0-100).'),
     protectionStatus: z
       .string()
@@ -67,7 +67,7 @@ const analyzeBatteryHealthPrompt = ai.definePrompt({
 Поточні дані акумулятора:
 - Загальна напруга: {{{currentData.totalVoltage}}} V
 - Загальний струм: {{{currentData.totalCurrent}}} A
-- Температура: {{{currentData.temperature}}} °C
+- Температури (всі датчики): {{{json currentData.temperatures}}} °C
 - Стан заряду (SoC): {{{currentData.stateOfCharge}}} %
 - Статус захисту: {{{currentData.protectionStatus}}}
 - Напруги комірок: {{{json currentData.cellVoltages}}}
@@ -82,9 +82,11 @@ const analyzeBatteryHealthPrompt = ai.definePrompt({
 Історичні дані:
 {{{json historicalData}}}
 
+Зверніть увагу на різницю температур між датчиками. Якщо вона перевищує 5°C, це може свідчити про локальний перегрів комірок або поганий контакт.
+
 Надайте наступне українською мовою:
 1. Загальний підсумок стану.
-2. Детальний аналіз поточних показників та аномалій.
+2. Детальний аналіз поточних показників (зокрема температурних аномалій).
 3. Історичний аналіз тенденцій (якщо дані доступні).
 4. Конкретні рекомендації щодо обслуговування.
 5. Критичні сповіщення (якщо є).`,

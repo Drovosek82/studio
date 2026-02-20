@@ -4,6 +4,7 @@ import { Battery, ShieldCheck, Zap, Thermometer } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BatteryData } from "@/lib/types";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DashboardHeaderProps {
   data?: BatteryData;
@@ -11,6 +12,11 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ data }: DashboardHeaderProps) {
   if (!data) return null;
+
+  // Вираховуємо середню температуру для головного дисплея
+  const avgTemp = data.temperatures.length > 0 
+    ? data.temperatures.reduce((a, b) => a + b, 0) / data.temperatures.length 
+    : 0;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -79,19 +85,47 @@ export function DashboardHeader({ data }: DashboardHeaderProps) {
       <Card className="glass-card border-none overflow-hidden">
         <CardContent className="p-6">
           <div className="flex justify-between items-start">
-            <div>
-              <p className="text-muted-foreground text-sm font-medium">Температура</p>
-              <h3 className="text-3xl font-bold mt-1 text-accent">
-                {data.temperature.toFixed(1)} <span className="text-lg font-normal">°C</span>
-              </h3>
+            <div className="flex-1">
+              <p className="text-muted-foreground text-sm font-medium">Температура (NTC)</p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <h3 className="text-3xl font-bold text-accent">
+                  {avgTemp.toFixed(1)} <span className="text-lg font-normal">°C</span>
+                </h3>
+                <Badge variant="secondary" className="bg-secondary/50 text-[10px] h-4">AVG</Badge>
+              </div>
             </div>
             <div className="p-2 bg-accent/10 rounded-lg text-accent">
               <Thermometer className="h-6 w-6" />
             </div>
           </div>
-          <div className="mt-4 flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-green-500" />
-            <p className="text-xs text-green-500 font-medium">{data.protectionStatus}</p>
+          
+          <div className="mt-4 space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <TooltipProvider>
+                {data.temperatures.map((t, i) => (
+                  <Tooltip key={i}>
+                    <TooltipTrigger asChild>
+                      <div className="flex flex-col items-center">
+                        <div className="h-3 w-1.5 bg-secondary rounded-full overflow-hidden mb-1">
+                          <div 
+                            className={`w-full ${t > 45 ? 'bg-red-500' : 'bg-accent'}`} 
+                            style={{ height: `${(t / 80) * 100}%`, marginTop: 'auto' }} 
+                          />
+                        </div>
+                        <span className="text-[8px] font-bold opacity-50">T{i+1}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-popover border-border">
+                      <p className="text-xs">Сенсор {i + 1}: <span className="text-accent font-bold">{t.toFixed(1)}°C</span></p>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </TooltipProvider>
+            </div>
+            <div className="flex items-center gap-1">
+               <ShieldCheck className="h-3 w-3 text-green-500" />
+               <p className="text-[10px] text-green-500 font-medium truncate">{data.protectionStatus}</p>
+            </div>
           </div>
         </CardContent>
       </Card>
