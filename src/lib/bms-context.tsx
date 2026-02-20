@@ -1,14 +1,17 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import { BatteryData, HistoricalRecord, BatteryDevice } from './types';
 import { 
   useUser, 
   useFirestore, 
   useCollection, 
   useMemoFirebase,
-  updateDocumentNonBlocking
+  setDocumentNonBlocking,
+  updateDocumentNonBlocking,
+  initiateAnonymousSignIn,
+  useAuth
 } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 
@@ -18,6 +21,7 @@ interface BmsContextType {
   history: Record<string, HistoricalRecord[]>;
   aggregated: any;
   isDemoMode: boolean;
+  isLoading: boolean;
   setDemoMode: (val: boolean) => void;
   toggleControl: (deviceId: string, field: string) => void;
   updateEeprom: (deviceId: string, key: string, value: any) => void;
@@ -36,7 +40,7 @@ const DEMO_DEVICES: BatteryDevice[] = [
 const createMockBatteryData = (id: string, name: string, isReal: boolean = false): BatteryData => ({
   id,
   name,
-  totalVoltage: isReal ? 52.1 : 52.4, // Реальна BMS ініціалізується базовим значенням
+  totalVoltage: isReal ? 52.1 : 52.4,
   totalCurrent: 0,
   temperatures: isReal ? [22, 23] : [25.0, 26.2, 24.8],
   stateOfCharge: isReal ? 0 : 85,
@@ -77,7 +81,8 @@ const createMockHistory = (id: string): HistoricalRecord[] =>
   }));
 
 export const BmsProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
   const db = useFirestore();
   const [isDemoMode, setIsDemoModeState] = useState(false);
   
@@ -87,11 +92,158 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
   
   const [directDevices, setDirectDevices] = useState<BatteryDevice[]>([]);
   const [directData, setDirectData] = useState<Record<string, BatteryData>>({});
+  
+  const [pendingDevices, setPendingDevices] = useState<Record<string, BatteryData>>({});
+
+  useEffect(() => {
+    if (!user && !isUserLoading && auth) {
+      initiateAnonymousSignIn(auth);
+    }
+  }, [user, isUserLoading, auth]);
 
   const devicesRef = useMemoFirebase(() => 
     user && db ? collection(db, 'users', user.uid, 'bmsDevices') : null, 
   [user, db]);
-  const { data: fbDevices } = useCollection<any>(devicesRef);
+  const { data: fbDevices, isLoading: isFbLoading } = useCollection<any>(devicesRef);
+
+  // 1. Спочатку обчислюємо дані
+  const allData = useMemo(() => {
+    const combined: Record<string, BatteryData> = isDemoMode 
+      ? { ...demoData } 
+      : { ...directData, ...pendingDevices };
+    
+    if (!isDemoMode && fbDevices) {
+      fbDevices.forEach(d => {
+        combined[d.id] = { ...combined[d.id], ...d };
+      });
+    }
+    return combined;
+  }, [isDemoMode, demoData, directData, pendingDevices, fbDevices]);
+
+  const devices = useMemo(() => {
+    if (isDemoMode) return demoDevices;
+    const fromFb = (fbDevices || []).map(d => ({ 
+      id: d.id, 
+      name: d.name, 
+      type: (d.type || 'ESP32') as any, 
+      status: (d.status || 'Offline') as any 
+    }));
+    const fromPending = Object.values(pendingDevices).map(d => ({
+      id: d.id,
+      name: d.name,
+      type: 'ESP32' as const,
+      status: 'Connecting' as const
+    }));
+    return [...fromFb, ...fromPending, ...directDevices];
+  }, [isDemoMode, demoDevices, fbDevices, pendingDevices, directDevices]);
+
+  const aggregated = useMemo(() => {
+    const networkData = devices.filter(d => d.type === 'ESP32').map(d => allData[d.id]).filter(Boolean);
+    if (networkData.length === 0) return null;
+    
+    return {
+      totalVoltage: networkData.reduce((acc, curr) => acc + (curr.totalVoltage || 0), 0) / networkData.length,
+      totalCurrent: networkData.reduce((acc, curr) => acc + (curr.totalCurrent || 0), 0),
+      avgSoC: networkData.reduce((acc, curr) => acc + (curr.stateOfCharge || 0), 0) / networkData.length,
+      deviceCount: networkData.length,
+      totalPower: networkData.reduce((acc, curr) => acc + ((curr.totalVoltage || 0) * (curr.totalCurrent || 0)), 0)
+    };
+  }, [devices, allData]);
+
+  // 2. Тепер оголошуємо функції, які використовують allData
+  const toggleControl = useCallback((deviceId: string, field: string) => {
+    const isSpecialId = deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_');
+    if (isDemoMode || isSpecialId) {
+      const setter = (isSpecialId && !isDemoMode) ? setDirectData : setDemoData;
+      setter(prev => {
+        if (!prev[deviceId]) return prev;
+        const currentData = prev[deviceId];
+        return {
+          ...prev,
+          [deviceId]: { ...currentData, [field]: !currentData[field as keyof BatteryData] }
+        };
+      });
+    } else if (user && db) {
+      const currentVal = allData[deviceId]?.[field as keyof BatteryData];
+      const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', deviceId);
+      updateDocumentNonBlocking(deviceRef, { [field]: !currentVal }); 
+    }
+  }, [isDemoMode, user, db, allData]);
+
+  const updateEeprom = useCallback((deviceId: string, key: string, value: any) => {
+    const isSpecialId = deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_');
+    if (isDemoMode || isSpecialId) {
+      const setter = (isSpecialId && !isDemoMode) ? setDirectData : setDemoData;
+      setter(prev => {
+        if (!prev[deviceId]) return prev;
+        return {
+          ...prev,
+          [deviceId]: {
+            ...prev[deviceId],
+            eeprom: { ...prev[deviceId].eeprom, [key]: value }
+          }
+        };
+      });
+    } else if (user && db) {
+      const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', deviceId);
+      updateDocumentNonBlocking(deviceRef, { [`eeprom.${key}`]: value });
+    }
+  }, [isDemoMode, user, db]);
+
+  const setBalancingMode = useCallback((deviceId: string, mode: 'charge' | 'always' | 'static') => {
+    const isSpecialId = deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_');
+    if (isDemoMode || isSpecialId) {
+      const setter = (isSpecialId && !isDemoMode) ? setDirectData : setDemoData;
+      setter(prev => {
+        if (!prev[deviceId]) return prev;
+        return {
+          ...prev,
+          [deviceId]: { ...prev[deviceId], balancingMode: mode }
+        };
+      });
+    } else if (user && db) {
+      const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', deviceId);
+      updateDocumentNonBlocking(deviceRef, { balancingMode: mode });
+    }
+  }, [isDemoMode, user, db]);
+
+  const addDirectBluetoothDevice = useCallback((name: string) => {
+    const id = `BLE_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+    const newDevice: BatteryDevice = { id, name, type: 'Bluetooth', status: 'Online' };
+    const newData = createMockBatteryData(id, name, true);
+    
+    setDirectDevices(prev => [...prev, newDevice]);
+    setDirectData(prev => ({ ...prev, [id]: newData }));
+    
+    return id;
+  }, []);
+
+  const addNetworkDevice = useCallback((name: string) => {
+    const id = `ESP32_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+    const mockData = createMockBatteryData(id, name, true);
+    mockData.protectionStatus = "Offline";
+
+    if (isDemoMode) {
+      const newDevice: BatteryDevice = { id, name, type: 'ESP32', status: 'Online' };
+      setDemoDevices(prev => [...prev, newDevice]);
+      setDemoData(prev => ({ ...prev, [id]: createMockBatteryData(id, name) }));
+      setDemoHistory(prev => ({ ...prev, [id]: createMockHistory(id) }));
+      return id;
+    } else if (user && db) {
+      const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', id);
+      setPendingDevices(prev => ({ ...prev, [id]: mockData }));
+      setDocumentNonBlocking(deviceRef, {
+        ...mockData,
+        id,
+        name,
+        type: 'ESP32',
+        status: 'Offline',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      return id;
+    }
+  }, [isDemoMode, user, db]);
 
   useEffect(() => {
     if (isDemoMode && demoDevices.length === 0) {
@@ -133,125 +285,13 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     return () => clearInterval(interval);
   }, [isDemoMode]);
 
-  const addDirectBluetoothDevice = useCallback((name: string) => {
-    const id = `BLE_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-    const newDevice: BatteryDevice = { id, name, type: 'Bluetooth', status: 'Online' };
-    const newData = createMockBatteryData(id, name, !isDemoMode);
-    
-    if (isDemoMode) {
-      setDemoDevices(prev => [...prev, newDevice]);
-      setDemoData(prev => ({ ...prev, [id]: newData }));
-      setDemoHistory(prev => ({ ...prev, [id]: createMockHistory(id) }));
-    } else {
-      setDirectDevices(prev => [...prev, newDevice]);
-      setDirectData(prev => ({ ...prev, [id]: newData }));
-    }
-    
-    return id;
-  }, [isDemoMode]);
-
-  const addNetworkDevice = useCallback((name: string) => {
-    if (isDemoMode) {
-      const id = `DEMO_ESP_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-      const newDevice: BatteryDevice = { id, name, type: 'ESP32', status: 'Online' };
-      setDemoDevices(prev => [...prev, newDevice]);
-      setDemoData(prev => ({ ...prev, [id]: createMockBatteryData(id, name) }));
-      setDemoHistory(prev => ({ ...prev, [id]: createMockHistory(id) }));
-      return id;
-    } else if (user && db) {
-      const id = `ESP32_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-      const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', id);
-      updateDocumentNonBlocking(deviceRef, {
-        id,
-        name,
-        type: 'ESP32',
-        status: 'Offline',
-        createdAt: serverTimestamp(),
-      }, { merge: true });
-      return id;
-    }
-  }, [isDemoMode, user, db]);
-
-  const toggleControl = useCallback((deviceId: string, field: string) => {
-    if (isDemoMode || deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_')) {
-      const setter = deviceId.startsWith('BLE_') ? setDirectData : setDemoData;
-      setter(prev => {
-        if (!prev[deviceId]) return prev;
-        return {
-          ...prev,
-          [deviceId]: { ...prev[deviceId], [field]: !prev[deviceId][field as keyof BatteryData] }
-        };
-      });
-    } else if (user && db) {
-      const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', deviceId);
-      updateDocumentNonBlocking(deviceRef, { [field]: true }); 
-    }
-  }, [isDemoMode, user, db]);
-
-  const updateEeprom = useCallback((deviceId: string, key: string, value: any) => {
-    if (isDemoMode || deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_')) {
-      const setter = deviceId.startsWith('BLE_') ? setDirectData : setDemoData;
-      setter(prev => {
-        if (!prev[deviceId]) return prev;
-        return {
-          ...prev,
-          [deviceId]: {
-            ...prev[deviceId],
-            eeprom: { ...prev[deviceId].eeprom, [key]: value }
-          }
-        };
-      });
-    } else if (user && db) {
-      const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', deviceId);
-      updateDocumentNonBlocking(deviceRef, { [`eeprom.${key}`]: value });
-    }
-  }, [isDemoMode, user, db]);
-
-  const setBalancingMode = useCallback((deviceId: string, mode: 'charge' | 'always' | 'static') => {
-    if (isDemoMode || deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_')) {
-      const setter = deviceId.startsWith('BLE_') ? setDirectData : setDemoData;
-      setter(prev => {
-        if (!prev[deviceId]) return prev;
-        return {
-          ...prev,
-          [deviceId]: { ...prev[deviceId], balancingMode: mode }
-        };
-      });
-    } else if (user && db) {
-      const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', deviceId);
-      updateDocumentNonBlocking(deviceRef, { balancingMode: mode });
-    }
-  }, [isDemoMode, user, db]);
-
-  const getAggregatedData = () => {
-    const networkData = isDemoMode 
-      ? demoDevices.filter(d => d.type === 'ESP32').map(d => demoData[d.id]).filter(Boolean)
-      : (fbDevices || []).filter(d => d.type === 'ESP32' && d.status === 'Online');
-
-    if (networkData.length === 0) return null;
-    
-    return {
-      totalVoltage: networkData.reduce((acc, curr) => acc + (curr.totalVoltage || 0), 0) / networkData.length,
-      totalCurrent: networkData.reduce((acc, curr) => acc + (curr.totalCurrent || 0), 0),
-      avgSoC: networkData.reduce((acc, curr) => acc + (curr.stateOfCharge || 0), 0) / networkData.length,
-      deviceCount: networkData.length,
-      totalPower: networkData.reduce((acc, curr) => acc + ((curr.totalVoltage || 0) * (curr.totalCurrent || 0)), 0)
-    };
-  };
-
-  const allData: Record<string, BatteryData> = isDemoMode ? { ...demoData } : { ...directData };
-  if (!isDemoMode && fbDevices) {
-    fbDevices.forEach(d => {
-      allData[d.id] = d as BatteryData;
-    });
-  }
-
   const value = {
-    devices: isDemoMode ? demoDevices : [...(fbDevices || []), ...directDevices],
+    devices,
     allData,
     history: isDemoMode ? demoHistory : {},
-    aggregated: getAggregatedData(),
+    aggregated,
     isDemoMode,
+    isLoading: isUserLoading || (!isDemoMode && isFbLoading),
     setDemoMode: setIsDemoModeState,
     toggleControl,
     updateEeprom,

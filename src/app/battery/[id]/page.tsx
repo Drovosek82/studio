@@ -1,6 +1,7 @@
+
 "use client";
 
-import { use } from "react";
+import { use, useMemo, useEffect, useState } from "react";
 import Link from "next/link";
 import { useBmsStore } from "@/lib/bms-store";
 import { DashboardHeader } from "@/components/bms/dashboard-header";
@@ -19,21 +20,52 @@ import {
   Zap,
   Activity,
   ShieldAlert,
-  RefreshCw
+  Loader2
 } from "lucide-react";
 
 export default function BatteryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { allData, history, toggleControl, setBalancingMode } = useBmsStore();
-  const data = allData[id];
-  const activeHistory = history[id] || [];
+  const { allData, history, toggleControl, setBalancingMode, isLoading: isContextLoading } = useBmsStore();
+  
+  // Локальний стан для очікування синхронізації контексту
+  const [isInitializing, setIsInitializing] = useState(true);
 
+  // Використовуємо useMemo для пошуку даних
+  const data = useMemo(() => allData[id], [allData, id]);
+  const activeHistory = useMemo(() => history[id] || [], [history, id]);
+
+  // Невелике очікування при першому рендері, щоб контекст встиг "прокинутись"
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitializing(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [id]);
+
+  // Стан завантаження
+  if ((isContextLoading || isInitializing) && !data) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background text-foreground">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <p className="text-muted-foreground animate-pulse">З'єднання з пристроєм {id}...</p>
+      </div>
+    );
+  }
+
+  // Якщо дані завантажені, але батареї справді немає в об'єкті allData
   if (!data) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <h2 className="text-2xl font-bold">Батарею не знайдено</h2>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background text-foreground">
+        <ShieldAlert className="h-12 w-12 text-red-500 opacity-50" />
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold">Батарею не знайдено</h2>
+          <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+            Пристрій <code className="bg-secondary px-1 rounded">{id}</code> не виявлено в системі. 
+            Перевірте підключення у вкладці "Підключення".
+          </p>
+        </div>
         <Link href="/">
-          <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> Повернутися</Button>
+          <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> На головну</Button>
         </Link>
       </div>
     );
@@ -51,7 +83,9 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
             </Link>
             <div>
               <h1 className="text-xl font-bold tracking-tight">{data.name}</h1>
-              <p className="text-[10px] uppercase font-bold text-accent opacity-70 tracking-widest">Детальний моніторинг</p>
+              <p className="text-[10px] uppercase font-bold text-accent opacity-70 tracking-widest">
+                {id.startsWith('BLE_') ? 'Пряме підключення' : 'Мережевий моніторинг'}
+              </p>
             </div>
           </div>
           <Link href={`/battery/${id}/eeprom`}>
@@ -75,11 +109,10 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
              <HistoryCharts history={activeHistory} />
           </div>
           <div className="space-y-6">
-             {/* Device Control Card */}
              <div className="glass-card p-6 rounded-xl space-y-6">
                 <h3 className="text-lg font-bold flex items-center gap-2">
                   <Power className="h-5 w-5 text-accent" />
-                  Керування пристроєм
+                  Керування MOSFET
                 </h3>
                 
                 <div className="space-y-5">
@@ -87,9 +120,8 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
                     <div className="space-y-0.5">
                       <Label className="text-sm font-medium flex items-center gap-2">
                         <Zap className={`h-4 w-4 ${data.isChargeEnabled ? 'text-green-500' : 'text-muted-foreground'}`} />
-                        MOSFET Заряду
+                        Заряд
                       </Label>
-                      <p className="text-[10px] text-muted-foreground">Дозвіл на приймання енергії</p>
                     </div>
                     <Switch 
                       checked={data.isChargeEnabled} 
@@ -101,9 +133,8 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
                     <div className="space-y-0.5">
                       <Label className="text-sm font-medium flex items-center gap-2">
                         <Power className={`h-4 w-4 ${data.isDischargeEnabled ? 'text-green-500' : 'text-muted-foreground'}`} />
-                        MOSFET Розряду
+                        Розряд
                       </Label>
-                      <p className="text-[10px] text-muted-foreground">Дозвіл на видачу енергії</p>
                     </div>
                     <Switch 
                       checked={data.isDischargeEnabled} 
@@ -118,7 +149,6 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
                           <Activity className={`h-4 w-4 ${data.isBalancingActive ? 'text-accent' : 'text-muted-foreground'}`} />
                           Балансування
                         </Label>
-                        <p className="text-[10px] text-muted-foreground">Головний вимикач вирівнювання</p>
                       </div>
                       <Switch 
                         checked={data.isBalancingActive} 
@@ -127,7 +157,7 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">Режим роботи балансира</Label>
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">Режим балансира</Label>
                       <Select 
                         value={data.balancingMode} 
                         onValueChange={(val: any) => setBalancingMode(id, val)}
@@ -137,26 +167,14 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
                           <SelectValue placeholder="Оберіть режим" />
                         </SelectTrigger>
                         <SelectContent className="bg-card border-border">
-                          <SelectItem value="charge">Тільки при зарядці</SelectItem>
-                          <SelectItem value="static">Статичне (завжди)</SelectItem>
-                          <SelectItem value="always">Смарт (при дельті напруги)</SelectItem>
+                          <SelectItem value="charge">При зарядці</SelectItem>
+                          <SelectItem value="static">Постійно</SelectItem>
+                          <SelectItem value="always">Розумний</SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-[8px] text-muted-foreground italic">
-                        {data.balancingMode === 'charge' ? "*Балансування працює лише коли подається струм заряду." : 
-                         data.balancingMode === 'static' ? "*Працює постійно при досягненні порогу bal_start." : 
-                         "*Автоматичне визначення оптимального моменту."}
-                      </p>
                     </div>
                   </div>
                 </div>
-
-                {!data.isChargeEnabled && !data.isDischargeEnabled && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-2">
-                    <ShieldAlert className="h-4 w-4 text-red-500 mt-0.5" />
-                    <p className="text-[10px] text-red-400">Всі виходи заблоковано. Батарея повністю ізольована.</p>
-                  </div>
-                )}
              </div>
 
              <AiAnalysis currentData={data} history={activeHistory} />
@@ -164,23 +182,13 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
              <div className="glass-card p-6 rounded-xl space-y-4">
                 <h3 className="text-lg font-bold flex items-center gap-2">
                   <Info className="h-5 w-5 text-accent" />
-                  Статус системи
+                  Параметри системи
                 </h3>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Балансування:</span>
+                    <span className="text-muted-foreground">Статус:</span>
                     <span className={data.isBalancingActive ? "text-accent font-medium flex items-center gap-1" : "text-muted-foreground"}>
-                      {data.isBalancingActive ? (
-                        <>
-                          Активне <RefreshCw className="h-3 w-3 animate-spin" />
-                        </>
-                      ) : "Вимкнено"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Активні комірки:</span>
-                    <span className="text-white font-medium">
-                      {data.balancingCells.filter(c => c).length > 0 ? data.balancingCells.map((c, i) => c ? i + 1 : null).filter(Boolean).join(', ') : '—'}
+                      {data.isBalancingActive ? "Вирівнювання..." : "Спокій"}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
