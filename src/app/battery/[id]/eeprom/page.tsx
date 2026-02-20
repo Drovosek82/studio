@@ -239,7 +239,7 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
                       onValueChange={(val) => handleInputChange('ntc_cnt', val)}
                     >
                       <SelectTrigger className="bg-secondary/30 border-none h-10">
-                        <SelectValue placeholder="Select count" />
+                        <SelectValue placeholder="NTC" />
                       </SelectTrigger>
                       <SelectContent>
                         {Array.from({ length: 8 }).map((_, i) => (

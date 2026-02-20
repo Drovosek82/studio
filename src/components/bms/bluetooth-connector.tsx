@@ -52,7 +52,7 @@ export function BluetoothConnector() {
 
       toast({
         title: `${t('aiModelIdentified')}: ${identification.modelName}`,
-        description: `Protocol: ${identification.protocol}. AI Base updated.`,
+        description: identification.protocol,
       });
     } catch (e) {
       console.warn("AI Identification failed, connecting as generic device");

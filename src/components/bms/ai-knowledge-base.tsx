@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo } from "react";
@@ -7,8 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, orderBy, limit } from "firebase/firestore";
+import { useBmsStore } from "@/lib/bms-store";
 
 export function AiKnowledgeBase() {
+  const { t } = useBmsStore();
   const { user } = useUser();
   const db = useFirestore();
 
@@ -24,9 +25,9 @@ export function AiKnowledgeBase() {
         <div className="p-4 bg-accent/20 rounded-full text-accent mb-4">
           <BrainCircuit className="h-10 w-10" />
         </div>
-        <h2 className="text-2xl font-bold">База знань ШІ</h2>
+        <h2 className="text-2xl font-bold">{t('aiKnowledgeTitle')}</h2>
         <p className="text-muted-foreground text-sm max-w-md">
-          Тут зберігаються моделі BMS, які ШІ ідентифікував під час ваших підключень. Він вчиться розпізнавати їхні протоколи та особливості.
+          {t('aiKnowledgeDesc')}
         </p>
       </div>
 
@@ -43,7 +44,7 @@ export function AiKnowledgeBase() {
                   <div>
                     <CardTitle className="text-lg">{insight.modelName}</CardTitle>
                     <CardDescription className="text-[10px] uppercase font-bold text-accent">
-                      Виробник: {insight.manufacturer || 'Невідомо'}
+                      {t('manufacturer')}: {insight.manufacturer || t('unknown')}
                     </CardDescription>
                   </div>
                   <Badge variant="outline" className="border-accent/20 text-accent">
@@ -61,6 +62,7 @@ export function AiKnowledgeBase() {
                 </div>
                 
                 <div className="p-3 bg-secondary/30 rounded-lg border border-border/50">
+                   <p className="text-[10px] text-accent uppercase font-bold mb-1">{t('technicalNotes')}</p>
                   <p className="text-xs text-muted-foreground leading-relaxed italic">
                     "{insight.technicalNotes}"
                   </p>
@@ -69,11 +71,11 @@ export function AiKnowledgeBase() {
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-2 border-t border-border/30">
                   <div className="flex items-center gap-1">
                     <History className="h-3 w-3" />
-                    Вперше бачено: {new Date(insight.lastSeen).toLocaleDateString()}
+                    {t('aiFirstSeen')}: {new Date(insight.lastSeen).toLocaleDateString()}
                   </div>
                   <div className="flex items-center gap-1">
                     <Zap className="h-3 w-3 text-accent" />
-                    Зустрічався: {insight.detectedCount} разів
+                    {t('aiDetectedCount')}: {insight.detectedCount}
                   </div>
                 </div>
               </CardContent>
@@ -83,9 +85,9 @@ export function AiKnowledgeBase() {
       ) : (
         <div className="text-center py-20 bg-secondary/10 rounded-2xl border border-dashed border-border">
           <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-          <h3 className="text-lg font-bold">База знань порожня</h3>
+          <h3 className="text-lg font-bold">{t('knowledgeBaseEmpty')}</h3>
           <p className="text-xs text-muted-foreground mt-2">
-            Підключайтеся до реальних BMS, і ШІ почне наповнювати вашу базу знань моделями.
+            {t('connectFirst')}
           </p>
         </div>
       )}

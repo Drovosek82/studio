@@ -35,7 +35,7 @@ import { collection, query, orderBy } from "firebase/firestore";
 export function FirmwareWizard() {
   const { user } = useUser();
   const db = useFirestore();
-  const { localHubIp: globalLocalHubIp } = useBmsStore();
+  const { localHubIp: globalLocalHubIp, t } = useBmsStore();
   
   const [mode, setMode] = useState<'bridge' | 'display' | 'hub'>('bridge');
   const [displayType, setDisplayType] = useState<string>("none");
@@ -54,7 +54,6 @@ export function FirmwareWizard() {
 
   const { toast } = useToast();
 
-  // Отримання моделей з бази знань ШІ
   const insightsRef = useMemoFirebase(() => 
     user && db ? query(collection(db, 'users', user.uid, 'modelInsights'), orderBy('modelName', 'asc')) : null,
   [user, db]);
@@ -81,8 +80,8 @@ export function FirmwareWizard() {
     if (espModel === 'esp8266' && (mode === 'bridge' || mode === 'hub')) {
       setMode('display');
       toast({
-        title: "MCU обмеження",
-        description: "ESP8266 не має Bluetooth, тому доступний лише режим екрана.",
+        title: "MCU Limitation",
+        description: "ESP8266 does not have Bluetooth, only Display mode available.",
       });
     }
   }, [espModel, mode, toast]);
@@ -90,8 +89,8 @@ export function FirmwareWizard() {
   const handleScanBms = async () => {
     if (typeof window !== 'undefined' && !navigator.bluetooth) {
       toast({
-        title: "Помилка",
-        description: "Ваш браузер не підтримує Web Bluetooth. Використовуйте Chrome або Edge.",
+        title: "Error",
+        description: "Your browser does not support Web Bluetooth.",
         variant: "destructive",
       });
       return;
@@ -107,14 +106,14 @@ export function FirmwareWizard() {
       if (device.name) {
         setBmsIdentifier(device.name);
         toast({
-          title: "BMS знайдено",
-          description: `Вибрано пристрій: ${device.name}`,
+          title: t('toastBmsFound'),
+          description: device.name,
         });
       }
     } catch (err: any) {
       if (err.name !== 'NotFoundError') {
         toast({
-          title: "Помилка сканування",
+          title: t('toastScanError'),
           description: err.message,
           variant: "destructive",
         });
@@ -127,39 +126,14 @@ export function FirmwareWizard() {
   const handleGenerate = async () => {
     if (!ssid || !password || !deviceId) {
       toast({
-        title: "Помилка",
-        description: "Заповніть Wi-Fi та назву пристрою",
+        title: "Error",
+        description: "Fill Wi-Fi and device name",
         variant: "destructive",
       });
       return;
     }
 
-    if (mode === 'bridge' && !bmsIdentifier) {
-      toast({
-        title: "Помилка",
-        description: "Вкажіть Bluetooth назву BMS для моста",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (useLocalHub && !localHubIp) {
-      toast({
-        title: "Помилка",
-        description: "Вкажіть IP-адресу локального хаба",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!user) {
-      toast({
-        title: "Помилка авторизації",
-        description: "Увійдіть у систему",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!user) return;
 
     setIsGenerating(true);
     try {
@@ -172,8 +146,6 @@ export function FirmwareWizard() {
         serverUrl = useLocalHub 
           ? `http://${localHubIp}/api/data` 
           : `${window.location.origin}/api/bms/aggregated?userId=${user.uid}`;
-      } else if (mode === 'hub') {
-        serverUrl = "Local Hub Aggregator";
       }
 
       const result = await generateEsp32Firmware({ 
@@ -189,13 +161,13 @@ export function FirmwareWizard() {
       });
       setFirmware(result.firmwareContent);
       toast({
-        title: "Прошивку створено",
-        description: `Готово для режиму: ${mode.toUpperCase()}.`,
+        title: t('toastFirmwareReady'),
+        description: `${t('firmwareMode')}: ${mode.toUpperCase()}.`,
       });
     } catch (error) {
       toast({
-        title: "Помилка",
-        description: "Не вдалося згенерувати прошивку.",
+        title: "Error",
+        description: "Failed to generate firmware.",
         variant: "destructive",
       });
     } finally {
@@ -218,23 +190,23 @@ export function FirmwareWizard() {
       <CardHeader>
         <div className="flex items-center gap-2 mb-2">
           <Layers className="h-5 w-5 text-accent" />
-          <CardTitle>Конструктор екосистеми</CardTitle>
+          <CardTitle>{t('firmwareWizard')}</CardTitle>
         </div>
         <CardDescription>
-          Створіть вузли (Bridges), центральний Хаб (Server) або віддалені дисплеї.
+          {t('wifiHubDesc')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <Tabs value={mode} onValueChange={(val: any) => setMode(val)} className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-secondary/50 h-10">
             <TabsTrigger value="bridge" className="gap-1 text-[9px] sm:text-xs" disabled={espModel === 'esp8266'}>
-              <Radio className="h-3 w-3" /> Міст
+              <Radio className="h-3 w-3" /> {t('bridgeMode')}
             </TabsTrigger>
             <TabsTrigger value="hub" className="gap-1 text-[9px] sm:text-xs" disabled={espModel === 'esp8266'}>
-              <Share2 className="h-3 w-3" /> Хаб
+              <Share2 className="h-3 w-3" /> {t('hubMode')}
             </TabsTrigger>
             <TabsTrigger value="display" className="gap-1 text-[9px] sm:text-xs">
-              <Monitor className="h-3 w-3" /> Екран
+              <Monitor className="h-3 w-3" /> {t('screenMode')}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -242,9 +214,9 @@ export function FirmwareWizard() {
         {mode === 'hub' && (
           <Alert variant="default" className="bg-accent/10 border-accent/20 text-accent">
             <Server className="h-4 w-4" />
-            <AlertTitle>Режим Хаба</AlertTitle>
+            <AlertTitle>{t('hubAlertTitle')}</AlertTitle>
             <AlertDescription className="text-xs">
-              Ця ESP32 стане <b>Центральним Сервером</b>. Вона не підключається до BMS сама, а збирає дані від усіх ваших "Містків" (Bridges) у мережі.
+              {t('hubAlertDesc')}
             </AlertDescription>
           </Alert>
         )}
@@ -252,44 +224,44 @@ export function FirmwareWizard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
-              <Cpu className="h-4 w-4" /> Модель MCU
+              <Cpu className="h-4 w-4" /> {t('mcuModel')}
             </Label>
             <Select value={espModel} onValueChange={setEspModel}>
               <SelectTrigger className="bg-secondary/50 border-none">
-                <SelectValue placeholder="Оберіть чіп" />
+                <SelectValue placeholder="MCU" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="esp32c3">ESP32-C3</SelectItem>
                 <SelectItem value="esp32s3">ESP32-S3</SelectItem>
                 <SelectItem value="esp32">ESP32 Classic</SelectItem>
-                <SelectItem value="esp8266">ESP8266 (Тільки екран)</SelectItem>
+                <SelectItem value="esp8266">ESP8266</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
-              <Tv className="h-4 w-4" /> Дисплей
+              <Tv className="h-4 w-4" /> {t('display')}
             </Label>
             <Select value={displayType} onValueChange={setDisplayType}>
               <SelectTrigger className="bg-secondary/50 border-none">
-                <SelectValue placeholder="Оберіть дисплей" />
+                <SelectValue placeholder="Display" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Без екрана</SelectItem>
+                <SelectItem value="none">{t('displayNone')}</SelectItem>
                 <SelectItem value="ssd1306">OLED 0.96" (SSD1306)</SelectItem>
                 <SelectItem value="sh1106">OLED 1.3" (SH1106)</SelectItem>
                 <SelectItem value="lcd1602">LCD 1602 (I2C)</SelectItem>
-                <SelectItem value="custom">Інший (Опис ШІ)</SelectItem>
+                <SelectItem value="custom">{t('displayCustom')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {displayType === 'custom' && (
             <div className="md:col-span-2 space-y-2 animate-in fade-in slide-in-from-top-2">
-              <Label>Опис нестандартного дисплея</Label>
+              <Label>{t('customDisplayDescLabel')}</Label>
               <Input 
-                placeholder="Напр. 1.8 TFT ST7735 SPI" 
+                placeholder="ST7735 SPI..." 
                 value={customDisplayDescription} 
                 onChange={(e) => setCustomDisplayDescription(e.target.value)}
                 className="bg-secondary/50 border-none"
@@ -301,17 +273,17 @@ export function FirmwareWizard() {
             <div className="md:col-span-2 p-4 bg-secondary/30 rounded-lg space-y-4 border border-border/50">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-sm">Використовувати локальний Хаб</Label>
-                  <p className="text-[10px] text-muted-foreground">Надсилати дані на іншу ESP32 замість хмари</p>
+                  <Label className="text-sm">{t('useLocalHub')}</Label>
+                  <p className="text-[10px] text-muted-foreground">{t('useLocalHubDesc')}</p>
                 </div>
                 <Switch checked={useLocalHub} onCheckedChange={setUseLocalHub} />
               </div>
               
               {useLocalHub && (
                 <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                  <Label className="text-xs">IP адреса вашого Хаба</Label>
+                  <Label className="text-xs">{t('localHubIpAddr')}</Label>
                   <Input 
-                    placeholder="Напр. 192.168.1.50" 
+                    placeholder="192.168.1.50" 
                     value={localHubIp} 
                     onChange={(e) => setLocalHubIp(e.target.value)}
                     className="bg-background border-accent/20"
@@ -326,11 +298,11 @@ export function FirmwareWizard() {
               {insights && insights.length > 0 && (
                 <div className="md:col-span-2 space-y-2 animate-in fade-in slide-in-from-top-2">
                   <Label className="flex items-center gap-2">
-                    <BrainCircuit className="h-4 w-4 text-accent" /> Вибір моделі з бази знань ШІ
+                    <BrainCircuit className="h-4 w-4 text-accent" /> {t('aiModelSelect')}
                   </Label>
                   <Select onValueChange={(val) => setBmsIdentifier(val)}>
                     <SelectTrigger className="bg-secondary/50 border-none">
-                      <SelectValue placeholder="Виберіть відому модель..." />
+                      <SelectValue placeholder={t('selectKnownModel')} />
                     </SelectTrigger>
                     <SelectContent>
                       {insights.map((insight: any) => (
@@ -340,17 +312,17 @@ export function FirmwareWizard() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-[10px] text-muted-foreground">ШІ заповнить налаштування на основі обраної моделі.</p>
+                  <p className="text-[10px] text-muted-foreground">{t('aiWillFillSettings')}</p>
                 </div>
               )}
 
               <div className="md:col-span-2 space-y-2">
                 <Label className="flex items-center gap-2">
-                  <Bluetooth className="h-4 w-4" /> Ідентифікатор BMS
+                  <Bluetooth className="h-4 w-4" /> {t('bmsId')}
                 </Label>
                 <div className="flex gap-2">
                   <Input 
-                    placeholder="Назва пристрою (напр. JBD-BMS)" 
+                    placeholder="JBD-BMS..." 
                     value={bmsIdentifier} 
                     onChange={(e) => setBmsIdentifier(e.target.value)}
                     className="bg-secondary/50 border-none"
@@ -362,7 +334,7 @@ export function FirmwareWizard() {
                     className="border-accent/20 text-accent gap-2 whitespace-nowrap"
                   >
                     {isScanningBms ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                    Знайти
+                    {t('find')}
                   </Button>
                 </div>
               </div>
@@ -371,10 +343,10 @@ export function FirmwareWizard() {
 
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
-              <Wifi className="h-4 w-4" /> Wi-Fi SSID
+              <Wifi className="h-4 w-4" /> {t('wifiSsid')}
             </Label>
             <Input 
-              placeholder="Назва мережі" 
+              placeholder="SSID" 
               value={ssid} 
               onChange={(e) => setSsid(e.target.value)}
               className="bg-secondary/50 border-none"
@@ -383,11 +355,11 @@ export function FirmwareWizard() {
           
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
-              <Shield className="h-4 w-4" /> Wi-Fi Пароль
+              <Shield className="h-4 w-4" /> {t('wifiPass')}
             </Label>
             <Input 
               type="password" 
-              placeholder="Пароль" 
+              placeholder="Password" 
               value={password} 
               onChange={(e) => setPassword(e.target.value)}
               className="bg-secondary/50 border-none"
@@ -401,12 +373,12 @@ export function FirmwareWizard() {
           disabled={isGenerating || !user}
           className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
         >
-          {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Згенерувати прошивку'}
+          {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : t('generateFirmware')}
         </Button>
         {firmware && (
           <Button variant="outline" onClick={handleDownload} className="w-full border-accent/20 text-accent hover:bg-accent/10">
             <Download className="mr-2 h-4 w-4" />
-            Завантажити .ino file
+            {t('downloadIno')}
           </Button>
         )}
       </CardFooter>

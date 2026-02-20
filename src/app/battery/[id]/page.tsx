@@ -51,13 +51,13 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background text-foreground">
         <ShieldAlert className="h-12 w-12 text-red-500 opacity-50" />
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold">{t('waitingData')}</h2>
+          <h2 className="text-2xl font-bold">{t('deviceNotFound')}</h2>
           <p className="text-sm text-muted-foreground max-w-xs mx-auto">
             Device <code className="bg-secondary px-1 rounded">{id}</code> was not found. 
           </p>
         </div>
         <Link href="/">
-          <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> {t('cancel')}</Button>
+          <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> {t('backToHome')}</Button>
         </Link>
       </div>
     );
@@ -76,7 +76,7 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
             <div>
               <h1 className="text-xl font-bold tracking-tight">{data.name}</h1>
               <p className="text-[10px] uppercase font-bold text-accent opacity-70 tracking-widest">
-                {id.startsWith('BLE_') ? t('bleDirectAccess') : t('wifiHub')}
+                {id.startsWith('BLE_') ? t('bleDirectTag') : t('wifiHubTag')}
               </p>
             </div>
           </div>
