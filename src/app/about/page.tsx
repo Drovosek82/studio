@@ -16,7 +16,9 @@ import {
   Database,
   Users,
   Share2,
-  ExternalLink
+  ExternalLink,
+  Menu,
+  MousePointer2
 } from "lucide-react";
 
 export default function AboutPage() {
@@ -74,22 +76,46 @@ export default function AboutPage() {
           </p>
         </section>
 
-        <section className="p-8 bg-blue-500/10 rounded-2xl border border-blue-500/20 space-y-4">
+        <section className="p-8 bg-blue-500/10 rounded-2xl border border-blue-500/20 space-y-6">
           <h3 className="text-xl font-bold flex items-center gap-2">
             <Share2 className="h-5 w-5 text-blue-500" />
-            Як поділитися з телефону?
+            Як знайти «App Hosting» у Firebase Console (Інструкція)
           </h3>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Це посилання, яке ви бачите зараз — приватне. Щоб поділитися робочим додатком:
+            Оскільки ви з телефону, ось точний шлях, куди натискати:
           </p>
-          <ol className="text-sm space-y-3 list-decimal pl-4 text-muted-foreground">
-            <li>Зайдіть у <b>Firebase Console</b> у вашому мобільному браузері.</li>
-            <li>Виберіть розділ <b>App Hosting</b> та підключіть ваш GitHub репозиторій.</li>
-            <li>Після завершення ви отримаєте посилання виду <code>your-app.web.app</code>.</li>
-            <li>Просто скопіюйте його та надішліть друзям!</li>
-          </ol>
-          <div className="pt-2">
-            <Button variant="outline" className="w-full gap-2 border-blue-500/30 text-blue-400" asChild>
+          <div className="space-y-4">
+            <div className="flex gap-4 items-start">
+              <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">1</div>
+              <div>
+                <p className="font-bold text-sm">Відкрийте меню</p>
+                <p className="text-xs text-muted-foreground">У верхньому лівому куті натисніть на іконку «бургер» <Menu className="inline h-3 w-3" /> (три горизонтальні лінії).</p>
+              </div>
+            </div>
+            <div className="flex gap-4 items-start">
+              <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">2</div>
+              <div>
+                <p className="font-bold text-sm">Розділ Build (Розбудова)</p>
+                <p className="text-xs text-muted-foreground">Знайдіть пункт <b>Build</b> (або Розбудова) — там зазвичай іконка молотка або стіни.</p>
+              </div>
+            </div>
+            <div className="flex gap-4 items-start">
+              <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">3</div>
+              <div>
+                <p className="font-bold text-sm">App Hosting</p>
+                <p className="text-xs text-muted-foreground">Натисніть на <b>App Hosting</b> (це майже в самому низу списку Build).</p>
+              </div>
+            </div>
+            <div className="flex gap-4 items-start">
+              <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">4</div>
+              <div>
+                <p className="font-bold text-sm">Get Started & Connect</p>
+                <p className="text-xs text-muted-foreground">Натисніть синю кнопку <b>Get started</b>, а потім кнопку <b>Connect to GitHub</b> <MousePointer2 className="inline h-3 w-3" />.</p>
+              </div>
+            </div>
+          </div>
+          <div className="pt-4">
+            <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700" asChild>
               <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">
                 Відкрити Firebase Console <ExternalLink className="h-3 w-3" />
               </a>
