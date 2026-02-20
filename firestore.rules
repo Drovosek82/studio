@@ -1,106 +1,18 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
 
-    /**
-     * BMS MONITORING SYSTEM SECURITY RULES
-     *
-     * Core Philosophy: 
-     * This ruleset enforces a strict user-ownership model using "Authorization Independence."
-     * All application data is organized hierarchically under a top-level /users/{userId} path.
-     * This design ensures that the user's identity is baked into the document path itself,
-     * allowing for high-performance security checks without the need for expensive cross-document lookups.
-     *
-     * Data Structure:
-     * - /users/{userId}/deviceGroups/{deviceGroupId} : User-defined groups for organizing BMS units.
-     * - /users/{userId}/esp32Gateways/{esp32GatewayId} : Hardware gateways (ESP32-C3) owned by the user.
-     * - /users/{userId}/bmsDevices/{bmsDeviceId} : Individual BMS units monitored by the user.
-     * - /users/{userId}/bmsDevices/{bmsDeviceId}/bmsDataRecords/{recordId} : Historical telemetry for a specific BMS.
-     *
-     * Key Security Decisions:
-     * 1. Ownership Model: Access to any document is strictly limited to the user whose ID matches the {userId} wildcard in the path.
-     * 2. Prototyping Flexibility: Rules enforce WHO can write but do not strictly validate the SHAPE of the data, allowing for rapid schema evolution.
-     * 3. Relational Integrity: During creation, we verify that the internal 'id' of the document matches the Firestore document ID to ensure data consistency.
-     * 4. State Safety: Update and Delete operations explicitly verify that a document exists before permitting the action.
-     */
-
-    // --- Helper Functions ---
-
-    /** @description Checks if the request is from an authenticated user. */
-    function isSignedIn() {
-      return request.auth != null;
+    match /users/{userId}/bmsDevices/{deviceId} {
+      allow read, write: if isOwner(userId);
     }
-
-    /** @description Checks if the authenticated user matches the provided userId from the path. */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    
+    match /users/{userId}/modelInsights/{insightId} {
+      allow read, write: if isOwner(userId);
     }
-
-    /** @description Combines ownership check with existence check for destructive operations. */
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
-    }
-
-    // --- Collection Rules ---
-
-    /**
-     * @description Rules for Device Groups. Only the owner can manage their groups.
-     * @path /users/{userId}/deviceGroups/{deviceGroupId}
-     * @allow User 'abc' (get) /users/abc/deviceGroups/group1
-     * @deny User 'xyz' (list) /users/abc/deviceGroups
-     * @principle Ownership - Access restricted by user path segment.
-     */
-    match /users/{userId}/deviceGroups/{deviceGroupId} {
-      allow get, list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.id == deviceGroupId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description Rules for ESP32 Gateways. Only the owner can register or update their gateways.
-     * @path /users/{userId}/esp32Gateways/{esp32GatewayId}
-     * @allow User 'abc' (create) gateway with id 'gw1' under /users/abc/esp32Gateways/gw1
-     * @deny User 'abc' (update) gateway where the internal ID is modified.
-     * @principle Relational Integrity - Enforces consistency between document ID and internal data.
-     */
-    match /users/{userId}/esp32Gateways/{esp32GatewayId} {
-      allow get, list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.id == esp32GatewayId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description Rules for BMS Devices. Owners manage their batteries; links to groups/gateways are allowed.
-     * @path /users/{userId}/bmsDevices/{bmsDeviceId}
-     * @allow User 'abc' (list) their own bmsDevices.
-     * @deny Unauthenticated user (get) any bmsDevice.
-     * @principle Path-based Authorization - Leverages the userId in the path for zero-cost checks.
-     */
-    match /users/{userId}/bmsDevices/{bmsDeviceId} {
-      allow get, list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.id == bmsDeviceId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
-
-      /**
-       * @description Rules for historical BMS data records.
-       * @path /users/{userId}/bmsDevices/{bmsDeviceId}/bmsDataRecords/{bmsDataRecordId}
-       * @allow User 'abc' (create) telemetry for their own device 'bat1'.
-       * @deny User 'abc' (create) telemetry for user 'xyz's device.
-       * @principle Hierarchical Security - Subcollections inherit the protection of the parent user path.
-       */
-      match /bmsDataRecords/{bmsDataRecordId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.bmsDeviceId == bmsDeviceId;
-        allow update: if isExistingOwner(userId) && request.resource.data.bmsDeviceId == resource.data.bmsDeviceId;
-        allow delete: if isExistingOwner(userId);
-      }
-    }
-
-    // --- Global Deny ---
-    // Explicitly deny access to any other paths not defined above.
+    
     match /{document=**} {
       allow read, write: if false;
     }

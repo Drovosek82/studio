@@ -1,361 +1,71 @@
+
 {
   "entities": {
     "DeviceGroup": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "DeviceGroup",
       "type": "object",
-      "description": "Represents a logical grouping of BMS devices for organizational purposes, allowing users to manage and view related devices together.",
+      "description": "Represents a logical grouping of BMS devices for organizational purposes.",
       "properties": {
-        "$schema": {
-          "type": "string",
-          "description": "JSON Schema draft version.",
-          "format": "uri"
-        },
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the DeviceGroup entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "User-defined name for the group (e.g., 'Main Battery Bank', 'Workshop Tools')."
-        },
-        "description": {
-          "type": "string",
-          "description": "An optional detailed description of the device group."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the device group was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating the last time the device group was updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "$schema",
-        "id",
-        "name",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "ESP32Gateway": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ESP32Gateway",
-      "type": "object",
-      "description": "Represents an ESP32-C3 Super Mini device configured as a Wi-Fi gateway to relay data from one or more JBD BMS units.",
-      "properties": {
-        "$schema": {
-          "type": "string",
-          "description": "JSON Schema draft version.",
-          "format": "uri"
-        },
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ESP32Gateway entity."
-        },
-        "deviceId": {
-          "type": "string",
-          "description": "The user-defined unique device ID for the ESP32 (e.g., 'ESP32_001')."
-        },
-        "name": {
-          "type": "string",
-          "description": "A user-friendly name for the ESP32 gateway."
-        },
-        "description": {
-          "type": "string",
-          "description": "An optional detailed description of the ESP32 gateway."
-        },
-        "ssid": {
-          "type": "string",
-          "description": "The Wi-Fi network SSID to which the ESP32 gateway connects."
-        },
-        "firmwareVersion": {
-          "type": "string",
-          "description": "The version of the firmware currently running on the ESP32 gateway."
-        },
-        "lastSeenAt": {
-          "type": "string",
-          "description": "Timestamp indicating the last time the ESP32 gateway reported its status or data.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "Current operational status of the ESP32 gateway (e.g., 'online', 'offline', 'configuring', 'error')."
-        },
-        "ipAddress": {
-          "type": "string",
-          "description": "The current IP address of the ESP32 gateway on the local network.",
-          "format": "ipv4"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the ESP32 gateway was added to the system.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating the last time the ESP32 gateway's configuration was updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "$schema",
-        "id",
-        "deviceId",
-        "name",
-        "ssid",
-        "firmwareVersion",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "name", "createdAt", "updatedAt"]
     },
     "BMSDevice": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "BMSDevice",
       "type": "object",
-      "description": "Represents a single Battery Management System (BMS) unit that is being monitored.",
+      "description": "Represents a single BMS unit being monitored.",
       "properties": {
-        "$schema": {
-          "type": "string",
-          "description": "JSON Schema draft version.",
-          "format": "uri"
-        },
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the BMSDevice entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "A user-friendly name for the BMS device (e.g., 'Workshop Battery 1', 'Solar Bank')."
-        },
-        "description": {
-          "type": "string",
-          "description": "An optional detailed description of the BMS device."
-        },
-        "connectionType": {
-          "type": "string",
-          "description": "The method used to connect to the BMS device (e.g., 'bluetooth', 'esp32').",
-          "items": {
-            "type": "string"
-          }
-        },
-        "bluetoothMacAddress": {
-          "type": "string",
-          "description": "The Bluetooth MAC address of the BMS device if connected directly via Bluetooth. (Relationship: BMSDevice 1:1 Bluetooth Connection Details)"
-        },
-        "esp32GatewayId": {
-          "type": "string",
-          "description": "Reference to the ESP32Gateway entity if the BMS is connected via an ESP32 gateway. (Relationship: ESP32Gateway 1:N BMSDevice)"
-        },
-        "groupId": {
-          "type": "string",
-          "description": "Reference to the DeviceGroup this BMS device belongs to. (Relationship: DeviceGroup 1:N BMSDevice)"
-        },
-        "supportedCellConfiguration": {
-          "type": "string",
-          "description": "The cell configuration supported by the BMS (e.g., '14S Li-ion')."
-        },
-        "firmwareProtocol": {
-          "type": "string",
-          "description": "The communication protocol used by the BMS (e.g., 'Xiaoxiang BMS Protocol')."
-        },
-        "lastDataReceivedAt": {
-          "type": "string",
-          "description": "Timestamp indicating the last time data was successfully received from this BMS device.",
-          "format": "date-time"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the BMS device was added to the system.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating the last time the BMS device's configuration was updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "modelId": { "type": "string", "description": "Reference to identified model." },
+        "type": { "type": "string", "enum": ["ESP32", "Bluetooth"] },
+        "lastSeenAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "$schema",
-        "id",
-        "name",
-        "connectionType",
-        "groupId",
-        "supportedCellConfiguration",
-        "firmwareProtocol",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "name", "type"]
     },
-    "BMSDataRecord": {
+    "BmsModelInsight": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "BMSDataRecord",
+      "title": "BmsModelInsight",
       "type": "object",
-      "description": "Represents a single historical data snapshot captured from a BMS device at a specific point in time.",
+      "description": "Information about a specific BMS model identified by AI.",
       "properties": {
-        "$schema": {
-          "type": "string",
-          "description": "JSON Schema draft version.",
-          "format": "uri"
-        },
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the BMSDataRecord entity."
-        },
-        "bmsDeviceId": {
-          "type": "string",
-          "description": "Reference to the BMSDevice this data record belongs to. (Relationship: BMSDevice 1:N BMSDataRecord)"
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "The exact date and time when this data record was captured.",
-          "format": "date-time"
-        },
-        "totalVoltage": {
-          "type": "number",
-          "description": "The total voltage of the battery pack, in Volts."
-        },
-        "current": {
-          "type": "number",
-          "description": "The current flowing into or out of the battery pack, in Amperes. Positive for charging, negative for discharging."
-        },
-        "stateOfCharge": {
-          "type": "number",
-          "description": "The estimated State of Charge (SoC) of the battery pack, as a percentage (0-100)."
-        },
-        "averageTemperature": {
-          "type": "number",
-          "description": "The average temperature of the battery pack, in Celsius."
-        },
-        "cellVoltages": {
-          "type": "array",
-          "description": "An array of individual cell voltages within the battery pack, in Volts.",
-          "items": {
-            "type": "number"
-          }
-        },
-        "protectionStatusFlags": {
-          "type": "array",
-          "description": "An array of strings indicating any active protection statuses (e.g., 'Overvoltage', 'Overtemperature', 'Overcurrent').",
-          "items": {
-            "type": "string"
-          }
-        },
-        "healthStatus": {
-          "type": "string",
-          "description": "A summarized health status of the battery at the time of the record (e.g., 'Normal', 'Warning', 'Critical')."
-        }
+        "id": { "type": "string" },
+        "modelName": { "type": "string" },
+        "protocol": { "type": "string" },
+        "manufacturer": { "type": "string" },
+        "capabilities": { "type": "array", "items": { "type": "string" } },
+        "detectedCount": { "type": "number" },
+        "lastSeen": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "$schema",
-        "id",
-        "bmsDeviceId",
-        "timestamp",
-        "totalVoltage",
-        "current",
-        "stateOfCharge",
-        "cellVoltages",
-        "protectionStatusFlags"
-      ]
+      "required": ["id", "modelName", "protocol", "detectedCount"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}/deviceGroups/{deviceGroupId}",
-        "definition": {
-          "entityName": "DeviceGroup",
-          "schema": {
-            "$ref": "#/backend/entities/DeviceGroup"
-          },
-          "description": "Групи пристроїв, визначені користувачем, для організації BMS пристроїв. Включає денормалізований ідентифікатор власника (неявний у шляху).",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Унікальний ідентифікатор користувача, який володіє групою пристроїв."
-            },
-            {
-              "name": "deviceGroupId",
-              "description": "Унікальний ідентифікатор групи пристроїв."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/esp32Gateways/{esp32GatewayId}",
-        "definition": {
-          "entityName": "ESP32Gateway",
-          "schema": {
-            "$ref": "#/backend/entities/ESP32Gateway"
-          },
-          "description": "Шлюзи ESP32, налаштовані користувачем. Включає денормалізований ідентифікатор власника (неявний у шляху).",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Унікальний ідентифікатор користувача, який володіє шлюзом ESP32."
-            },
-            {
-              "name": "esp32GatewayId",
-              "description": "Унікальний ідентифікатор шлюзу ESP32."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/bmsDevices/{bmsDeviceId}",
+        "path": "/users/{userId}/bmsDevices/{deviceId}",
         "definition": {
           "entityName": "BMSDevice",
-          "schema": {
-            "$ref": "#/backend/entities/BMSDevice"
-          },
-          "description": "Окремі BMS пристрої, що належать користувачеві та моніторяться ним. Включає денормалізований ідентифікатор власника (неявний у шляху). Містить посилання на groupId та esp32GatewayId.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Унікальний ідентифікатор користувача, який володіє пристроєм BMS."
-            },
-            {
-              "name": "bmsDeviceId",
-              "description": "Унікальний ідентифікатор пристрою BMS."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/BMSDevice" },
+          "description": "Користувацькі пристрої BMS."
         }
       },
       {
-        "path": "/users/{userId}/bmsDevices/{bmsDeviceId}/bmsDataRecords/{bmsDataRecordId}",
+        "path": "/users/{userId}/modelInsights/{insightId}",
         "definition": {
-          "entityName": "BMSDataRecord",
-          "schema": {
-            "$ref": "#/backend/entities/BMSDataRecord"
-          },
-          "description": "Історичні знімки даних для конкретного BMS пристрою. Власність безпосередньо походить від батьківського шляху (userId), а поле bmsDeviceId у документі відповідає підстановочному знаку батьківської колекції, забезпечуючи Незалежність Авторизації для прямого доступу та QAP для запитів списків в межах записів пристрою.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Унікальний ідентифікатор користувача, який володіє батьківським пристроєм BMS."
-            },
-            {
-              "name": "bmsDeviceId",
-              "description": "Унікальний ідентифікатор батьківського пристрою BMS."
-            },
-            {
-              "name": "bmsDataRecordId",
-              "description": "Унікальний ідентифікатор запису даних BMS."
-            }
-          ]
+          "entityName": "BmsModelInsight",
+          "schema": { "$ref": "#/backend/entities/BmsModelInsight" },
+          "description": "База знань ШІ про моделі, з якими працював користувач."
         }
       }
-    ],
-    "reasoning": "Ця структура Firestore розроблена для забезпечення високої безпеки, масштабованості та зручності налагодження відповідно до встановлених принципів.Авторизаційна Незалежність:Основний принцип Авторизаційної Незалежності досягається шляхом розміщення всіх даних, що належать користувачеві, у підколекціях безпосередньо під шляхом /users/{userId}/. Це означає, що userId з шляху колекції (/users/{userId}/deviceGroups, /users/{userId}/esp32Gateways, /users/{userId}/bmsDevices) діє як денормалізований ownerId. Правила безпеки можуть безпосередньо порівнювати request.auth.uid з цим userId з підстановкового знака шляху, усуваючи необхідність у викликах get() для перевірки батьківських документів. Наприклад, для BMSDataRecord, що знаходиться за шляхом /users/{userId}/bmsDevices/{bmsDeviceId}/bmsDataRecords/{bmsDataRecordId}, авторизація здійснюється безпосередньо через userId у шляху, забезпечуючи атомарність операцій та спрощення правил. Поле bmsDeviceId у документі BMSDataRecord слугує для збереження зв'язку та цілісності даних, але не є критичним для правил авторизації завдяки ієрархічній структурі.QAPs (Правила не є фільтрами):Структурна сегрегація забезпечує підтримку Запитів з Авторизацією (QAPs). Кожен документ у колекції /users/{userId}/... має єдину позицію безпеки – належить userId. Це дозволяє клієнтським запитам list ефективно працювати без перевірки безпеки на стороні сервера, оскільки користувач може робити запити лише до своїх власних даних (/users/{request.auth.uid}/...). Запити до bmsDataRecords для конкретного пристрою також обмежені шляхом користувача та пристрою, що гарантує, що лише дозволені дані повертаються.Ключові Стратегії:* А. Авторизаційна Незалежність через Денормалізацію: Власник даних (userId) денормалізований безпосередньо в ієрархічний шлях для всіх основних об'єктів (DeviceGroup, ESP32Gateway, BMSDevice).* В. Структурна Сегрегація: Всі колекції (наприклад, deviceGroups, esp32Gateways, bmsDevices) містять документи з однорідними вимогами до безпеки (приватні дані користувача). Це спрощує правила безпеки та мінімізує помилки.* С. Моделювання Доступу: Використовується шлях на основі власності (/users/{userId}/...) для приватних даних та продовження ієрархії для вкладених даних.* D. Чіткість та Прогнозованість Даних: Використовуються описові назви підстановок (наприклад, {userId}, {deviceGroupId}) та стандартизовані поля часу, що покращує читабельність та налагодження правил.Цей підхід створює надійну основу для безпечного та керованого додатка моніторингу. Для демо-режиму, якщо він передбачає загальнодоступні дані, слід створити окрему колекцію верхнього рівня (наприклад, /demo_data), яка буде доступна лише для читання."
+    ]
   }
 }
