@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -17,7 +18,7 @@ import {
 import { 
   Activity, 
   Settings, 
-  Bluetooth, 
+  Bluetooth as BluetoothIcon, 
   LayoutDashboard, 
   CircleDot,
   ChevronRight,
@@ -91,7 +92,7 @@ export default function Home() {
               <LayoutDashboard className="h-4 w-4" /> {t('dashboard')}
             </TabsTrigger>
             <TabsTrigger value="connect" className="gap-2">
-              <Bluetooth className="h-4 w-4" /> {t('connect')}
+              <BluetoothIcon className="h-4 w-4" /> {t('connect')}
             </TabsTrigger>
             <TabsTrigger value="intelligence" className="gap-2">
               <BrainCircuit className="h-4 w-4" /> {t('intelligence')}
@@ -137,7 +138,7 @@ export default function Home() {
                             <CardContent className="p-4 flex items-center justify-between">
                               <div className="flex items-center gap-4">
                                 <div className={`p-2 rounded-lg ${device.type === 'Bluetooth' ? 'bg-blue-500/10 text-blue-500' : 'bg-accent/10 text-accent'}`}>
-                                  {device.type === 'Bluetooth' ? <Bluetooth className="h-5 w-5" /> : <Cpu className="h-5 w-5" />}
+                                  {device.type === 'Bluetooth' ? <BluetoothIcon className="h-5 w-5" /> : <Cpu className="h-5 w-5" />}
                                 </div>
                                 <div>
                                   <h4 className="font-bold text-sm">{device.name}</h4>

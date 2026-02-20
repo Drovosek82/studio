@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bluetooth, Search, Cpu, Globe, Plus, ShieldAlert, BrainCircuit, Database } from "lucide-react";
+import { Bluetooth as BluetoothIcon, Search, Cpu, Globe, Plus, ShieldAlert, BrainCircuit, Database } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,10 +84,6 @@ export function BluetoothConnector() {
 
       // Додаємо пристрій з даними від ШІ
       const id = addDirectBluetoothDevice(name);
-      
-      // Якщо ШІ ідентифікував модель, ми можемо оновити її дані локально
-      // (Це зазвичай робиться через глобальний стан або Firestore)
-      
       router.push(`/battery/${id}`);
 
     } catch (err: any) {
@@ -129,7 +125,7 @@ export function BluetoothConnector() {
         <Card className="glass-card border-none hover:ring-1 hover:ring-blue-500/50 transition-all group">
           <CardHeader>
             <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 mb-2">
-              <Bluetooth className="h-6 w-6" />
+              <BluetoothIcon className="h-6 w-6" />
             </div>
             <CardTitle>{t('bleDirectAccess')}</CardTitle>
             <CardDescription>{t('bleAiLearn')}</CardDescription>
@@ -145,7 +141,7 @@ export function BluetoothConnector() {
               disabled={isScanning}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {isScanning ? <Search className="h-4 w-4 mr-2 animate-spin" /> : <Bluetooth className="h-4 w-4 mr-2" />}
+              {isScanning ? <Search className="h-4 w-4 mr-2 animate-spin" /> : <BluetoothIcon className="h-4 w-4 mr-2" />}
               {isDemoMode ? "Simulate BLE" : t('scan')}
             </Button>
           </CardContent>

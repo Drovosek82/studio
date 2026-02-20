@@ -16,7 +16,7 @@ import {
   Server, 
   Share2,
   Search,
-  Bluetooth,
+  Bluetooth as BluetoothIcon,
   BrainCircuit
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -63,7 +63,7 @@ export function FirmwareWizard() {
   const { data: insights } = useCollection<any>(insightsRef);
 
   useEffect(() => {
-    if (globalLocalHubIp && (mode === 'bridge' || mode === 'display')) {
+    if (globalLocalHubIp && globalLocalHubIp.length > 5 && (mode === 'bridge' || mode === 'display')) {
       setLocalHubIp(globalLocalHubIp);
       setUseLocalHub(true);
     } else if (mode === 'hub') {
@@ -320,7 +320,7 @@ export function FirmwareWizard() {
 
               <div className="md:col-span-2 space-y-2">
                 <Label className="flex items-center gap-2">
-                  <Bluetooth className="h-4 w-4" /> {t('bmsId')}
+                  <BluetoothIcon className="h-4 w-4" /> {t('bmsId')}
                 </Label>
                 <div className="flex gap-2">
                   <Input 
