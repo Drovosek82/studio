@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -13,7 +12,7 @@ import {
   Layers, 
   ShieldCheck,
   Globe,
-  Database,
+  Database as DatabaseIcon,
   Users,
   Share2,
   ExternalLink,
@@ -179,7 +178,7 @@ export default function AboutPage() {
               <ShieldCheck className="h-3 w-3 text-green-500" /> Private Telemetry
             </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-background/50 rounded-full border border-border text-xs">
-              <Database className="h-3 w-3 text-blue-500" /> Shared Insights
+              <DatabaseIcon className="h-3 w-3 text-blue-500" /> Shared Insights
             </div>
           </div>
         </section>
