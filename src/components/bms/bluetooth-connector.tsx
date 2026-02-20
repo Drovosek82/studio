@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -14,7 +15,7 @@ import { toast } from "@/hooks/use-toast";
 
 export function BluetoothConnector() {
   const router = useRouter();
-  const { addDirectBluetoothDevice, addNetworkDevice, devices } = useBmsStore();
+  const { addDirectBluetoothDevice, addNetworkDevice, devices, isDemoMode } = useBmsStore();
   const [isScanning, setIsScanning] = useState(false);
   const [espName, setEspName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -23,20 +24,29 @@ export function BluetoothConnector() {
     setIsScanning(true);
     setError(null);
     try {
-      // Імітація запиту Bluetooth
-      await new Promise(r => setTimeout(r, 1500));
+      // Імітація сканування
+      await new Promise(r => setTimeout(r, 2000));
       
-      const bmsName = "JBD-BMS-Direct";
+      if (!isDemoMode) {
+        throw new Error("Реальних BMS пристроїв не знайдено поблизу. Увімкніть 'Демо-режим' у налаштуваннях для симуляції підключення.");
+      }
+      
+      const bmsName = "JBD-BMS-Direct-Demo";
       const id = addDirectBluetoothDevice(bmsName);
       
       toast({
-        title: "Підключено",
+        title: "Підключено (Simulated)",
         description: `Пряме підключення до ${bmsName} встановлено.`,
       });
       
       router.push(`/battery/${id}`);
     } catch (err: any) {
       setError(err.message || "Помилка підключення до Bluetooth");
+      toast({
+        title: "Помилка пошуку",
+        description: err.message,
+        variant: "destructive"
+      });
     } finally {
       setIsScanning(false);
     }
@@ -44,6 +54,14 @@ export function BluetoothConnector() {
 
   const handleAddEsp = () => {
     if (!espName) return;
+    
+    if (!isDemoMode) {
+      toast({
+        title: "Інформація",
+        description: "Для повноцінної роботи агрегації та отримання даних без реального заліза увімкніть 'Демо-режим'.",
+      });
+    }
+
     if (devices.filter(d => d.type === 'ESP32').length >= 20) {
       toast({
         title: "Ліміт вичерпано",
@@ -57,12 +75,20 @@ export function BluetoothConnector() {
     setEspName("");
     toast({
       title: "Пристрій додано",
-      description: `${espName} інтегровано в систему агрегації.`,
+      description: `${espName} інтегровано в систему.`,
     });
   };
 
   return (
     <div className="space-y-6">
+      {error && (
+        <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Помилка</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <Tabs defaultValue="direct" className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-secondary/20 h-12">
           <TabsTrigger value="direct" className="gap-2">
@@ -78,23 +104,23 @@ export function BluetoothConnector() {
             <CardHeader>
               <CardTitle className="text-lg">Підключення до однієї BMS</CardTitle>
               <CardDescription>
-                Швидкий доступ до параметрів та EEPROM без агрегації даних.
+                Швидкий доступ до параметрів без агрегації. Потребує увімкненого Демо-режиму для симуляції.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-accent/20 rounded-xl bg-accent/5">
-                <Bluetooth className={`h-16 w-16 text-accent mb-4 ${isScanning ? 'animate-pulse' : ''}`} />
+                <Bluetooth className={`h-16 w-16 text-accent mb-4 ${isScanning ? 'animate-spin' : ''}`} />
                 <Button 
                   size="lg" 
                   onClick={handleDirectBluetooth}
                   disabled={isScanning}
                   className="bg-accent text-accent-foreground hover:bg-accent/90"
                 >
-                  {isScanning ? "Пошук BMS..." : "Знайти та підключитися"}
+                  {isScanning ? "Сканування ефіру..." : "Знайти BMS пристрої"}
                 </Button>
               </div>
               <p className="text-[10px] text-muted-foreground text-center">
-                *Це підключення не впливає на загальну статистику на головній сторінці.
+                *У реальних умовах тут використовується Web Bluetooth API для зв'язку з JBD.
               </p>
             </CardContent>
           </Card>
@@ -105,7 +131,7 @@ export function BluetoothConnector() {
             <CardHeader>
               <CardTitle className="text-lg">Агрегація даних (ESP32)</CardTitle>
               <CardDescription>
-                Підключіть до 20 ESP32 пристроїв для моніторингу паралельних збірок.
+                Додайте вузли ESP32 для моніторингу паралельних збірок.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -122,7 +148,7 @@ export function BluetoothConnector() {
               </div>
 
               <div className="space-y-2">
-                <h4 className="text-xs font-bold uppercase text-muted-foreground">Підключені ESP32:</h4>
+                <h4 className="text-xs font-bold uppercase text-muted-foreground">Активні вузли:</h4>
                 <div className="grid grid-cols-1 gap-2">
                   {devices.filter(d => d.type === 'ESP32').map(dev => (
                     <div key={dev.id} className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg border border-border/50">

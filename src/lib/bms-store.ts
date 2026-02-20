@@ -10,11 +10,68 @@ const DEMO_DEVICES: BatteryDevice[] = [
   { id: 'BMS_02', name: 'Battery Pack B', type: 'ESP32', status: 'Online' }
 ];
 
+// Допоміжні функції для створення мок-даних (винесено для глобальної ініціалізації)
+const createMockBatteryData = (id: string, name: string): BatteryData => ({
+  id,
+  name,
+  totalVoltage: 52.4,
+  totalCurrent: 2.5,
+  temperatures: [25.0, 26.2, 24.8],
+  stateOfCharge: 85,
+  protectionStatus: 'Нормально',
+  cellVoltages: Array(14).fill(0).map(() => 3.742 + (Math.random() - 0.5) * 0.01),
+  balancingCells: Array(14).fill(false),
+  lastUpdated: new Date().toISOString(),
+  capacityAh: 100,
+  cycleCount: 42,
+  isChargeEnabled: true,
+  isDischargeEnabled: true,
+  isBalancingActive: false,
+  balancingMode: 'charge',
+  eeprom: {
+    design_cap: 100000,
+    ntc_cnt: 3,
+    cell_cnt: 14,
+    bal_start: 3400,
+    bal_window: 50,
+    shunt_res: 100,
+    covp: 4200,
+    covp_rel: 4100,
+    cuvp: 3000,
+    cuvp_rel: 3200,
+    chgoc: 5000,
+    dsgoc: 10000,
+    cap_100: 4150,
+    cap_80: 4000,
+    cap_60: 3850,
+    cap_40: 3750,
+    cap_20: 3650,
+    cap_0: 3000
+  }
+});
+
+const createMockHistory = (id: string): HistoricalRecord[] => 
+  Array(50).fill(0).map((_, i) => ({
+    timestamp: new Date(Date.now() - (50 - i) * 60000).toISOString(),
+    totalVoltage: 52.0 + Math.random() * 0.8,
+    totalCurrent: 1.0 + Math.random() * 5,
+    stateOfCharge: 80 + (i / 50) * 5,
+  }));
+
 // Глобальні змінні для збереження стану між викликами хуків
 let globalRealTimeData: Record<string, BatteryData> = {};
 let globalHistory: Record<string, HistoricalRecord[]> = {};
 let globalIsDemoMode = true;
-let globalDevices: BatteryDevice[] = globalIsDemoMode ? [...DEMO_DEVICES] : [];
+let globalDevices: BatteryDevice[] = [];
+
+// Початкова ініціалізація, якщо демо-режим увімкнено за замовчуванням
+if (globalIsDemoMode) {
+  DEMO_DEVICES.forEach(dev => {
+    globalDevices.push(dev);
+    globalRealTimeData[dev.id] = createMockBatteryData(dev.id, dev.name);
+    globalHistory[dev.id] = createMockHistory(dev.id);
+  });
+}
 
 export function useBmsStore() {
   const [devices, setDevices] = useState<BatteryDevice[]>(globalDevices);
@@ -23,60 +80,12 @@ export function useBmsStore() {
   const [history, setHistory] = useState<Record<string, HistoricalRecord[]>>(globalHistory);
   const [isDemoMode, setIsDemoModeState] = useState(globalIsDemoMode);
 
-  // Функція для створення мок-даних
-  const createMockBatteryData = (id: string, name: string): BatteryData => ({
-    id,
-    name,
-    totalVoltage: 52.4,
-    totalCurrent: 2.5,
-    temperatures: [25.0, 26.2, 24.8],
-    stateOfCharge: 85,
-    protectionStatus: 'Нормально',
-    cellVoltages: Array(14).fill(0).map(() => 3.742 + (Math.random() - 0.5) * 0.01),
-    balancingCells: Array(14).fill(false),
-    lastUpdated: new Date().toISOString(),
-    capacityAh: 100,
-    cycleCount: 42,
-    isChargeEnabled: true,
-    isDischargeEnabled: true,
-    isBalancingActive: false,
-    balancingMode: 'charge',
-    eeprom: {
-      design_cap: 100000, // 100Ah in 10mAh
-      ntc_cnt: 3,
-      cell_cnt: 14,
-      bal_start: 3400,
-      bal_window: 50,
-      shunt_res: 100,
-      covp: 4200,
-      covp_rel: 4100,
-      cuvp: 3000,
-      cuvp_rel: 3200,
-      chgoc: 5000,
-      dsgoc: 10000,
-      cap_100: 4150,
-      cap_80: 4000,
-      cap_60: 3850,
-      cap_40: 3750,
-      cap_20: 3650,
-      cap_0: 3000
-    }
-  });
-
-  const createMockHistory = (id: string): HistoricalRecord[] => 
-    Array(50).fill(0).map((_, i) => ({
-      timestamp: new Date(Date.now() - (50 - i) * 60000).toISOString(),
-      totalVoltage: 52.0 + Math.random() * 0.8,
-      totalCurrent: 1.0 + Math.random() * 5,
-      stateOfCharge: 80 + (i / 50) * 5,
-    }));
-
   const setDemoMode = (val: boolean) => {
     globalIsDemoMode = val;
     setIsDemoModeState(val);
     
     if (!val) {
-      // Повне очищення абсолютно всіх пристроїв та даних
+      // Повне очищення пристроїв та даних
       globalDevices = [];
       globalRealTimeData = {};
       globalHistory = {};
@@ -84,19 +93,20 @@ export function useBmsStore() {
       setRealTimeData({});
       setHistory({});
     } else {
-      // Відновлення демо-стану
-      globalDevices = [...DEMO_DEVICES];
+      // Відновлення демо-стану з негайною ініціалізацією
+      globalDevices = [];
       const initialData: Record<string, BatteryData> = {};
       const initialHistory: Record<string, HistoricalRecord[]> = {};
 
       DEMO_DEVICES.forEach(dev => {
+        globalDevices.push(dev);
         initialData[dev.id] = createMockBatteryData(dev.id, dev.name);
         initialHistory[dev.id] = createMockHistory(dev.id);
       });
 
       globalRealTimeData = initialData;
       globalHistory = initialHistory;
-      setDevices(globalDevices);
+      setDevices([...globalDevices]);
       setRealTimeData({ ...initialData });
       setHistory({ ...initialHistory });
     }
@@ -117,7 +127,6 @@ export function useBmsStore() {
   }, []);
 
   const addDirectBluetoothDevice = useCallback((name: string) => {
-    // Видаляємо попередні Direct Bluetooth підключення
     globalDevices = globalDevices.filter(d => d.type !== 'Bluetooth');
     
     const id = `BLE_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
@@ -133,7 +142,6 @@ export function useBmsStore() {
     return id;
   }, []);
 
-  // Синхронізація локального стану з глобальними змінними при монті
   useEffect(() => {
     setDevices(globalDevices);
     setRealTimeData(globalRealTimeData);
@@ -141,7 +149,6 @@ export function useBmsStore() {
     setIsDemoModeState(globalIsDemoMode);
   }, []);
 
-  // Інтервал для оновлення даних у демо-режимі
   useEffect(() => {
     if (!isDemoMode) return;
 
