@@ -70,7 +70,7 @@ export const translations = {
     toastConnEstablished: 'Зв\'язок встановлено',
     toastEepromReadSuccess: 'Дані EEPROM зчитано успішно.',
     toastWriteFinished: 'Запис завершено',
-    toastConfigSaved: 'Конфігурацію збережено.',
+    toastConfigSaved: 'Конфігурацію збережено. MOSFET можна увімкнути вручну.',
     toastFirmwareReady: 'Прошивку створено',
     toastScanError: 'Помилка сканування',
     toastBmsFound: 'BMS знайдено',
@@ -95,11 +95,23 @@ export const translations = {
     wifiHubDesc: 'Моніторинг через Wi-Fi Хаб.',
     wifiAggregation: 'Агрегація даних',
     wifiRemoteAccess: 'Віддалений доступ 24/7',
-    // Dashboard
+    // Dashboard & Charts
     powerWatt: 'Потужність',
     historyCharts: 'Графіки історії',
     voltageCurrentChart: 'Графік напруги та струму',
-    socChart: 'Стан заряду (SoC %)'
+    socChart: 'Стан заряду (SoC %)',
+    // Additional
+    cellVoltageDelay: 'Затримка напруги комірок',
+    packVoltageDelay: 'Затримка напруги пакета',
+    chargeOcDelay: 'Затримка струму заряду',
+    dsgOcDelay: 'Затримка струму розряду',
+    ntcCount: 'Кількість NTC датчиків',
+    balancingStart: 'Напруга початку балансування',
+    balancingWindow: 'Вікно балансування',
+    manufacturer: 'Виробник',
+    deviceName: 'Назва пристрою',
+    serialNumber: 'Серійний номер',
+    mfgDate: 'Дата виробництва'
   },
   en: {
     title: 'BMS Central',
@@ -148,7 +160,7 @@ export const translations = {
     hubMode: 'Hub Mode',
     bridgeMode: 'Bridge',
     screenMode: 'Screen',
-    aiModelSelect: 'AI Model Choice',
+    aiModelSelect: 'AI Model Selection',
     knowledgeBaseEmpty: 'Knowledge base is empty',
     factoryMode: 'Factory Mode Active',
     saveExit: 'Save & Exit',
@@ -170,7 +182,7 @@ export const translations = {
     toastConnEstablished: 'Connection Established',
     toastEepromReadSuccess: 'EEPROM data read successfully.',
     toastWriteFinished: 'Write Finished',
-    toastConfigSaved: 'Configuration saved.',
+    toastConfigSaved: 'Configuration saved. MOSFETs can be enabled manually.',
     toastFirmwareReady: 'Firmware created',
     toastScanError: 'Scan Error',
     toastBmsFound: 'BMS Found',
@@ -195,10 +207,22 @@ export const translations = {
     wifiHubDesc: 'Monitoring via Wi-Fi Hub.',
     wifiAggregation: 'Data aggregation',
     wifiRemoteAccess: '24/7 Remote access',
-    // Dashboard
+    // Dashboard & Charts
     powerWatt: 'Power',
     historyCharts: 'History Charts',
     voltageCurrentChart: 'Voltage & Current Chart',
-    socChart: 'State of Charge (SoC %)'
+    socChart: 'State of Charge (SoC %)',
+    // Additional
+    cellVoltageDelay: 'Cell Voltage Delay',
+    packVoltageDelay: 'Pack Voltage Delay',
+    chargeOcDelay: 'Charge OC Delay',
+    dsgOcDelay: 'Discharge OC Delay',
+    ntcCount: 'NTC Sensor Count',
+    balancingStart: 'Balancing Start Voltage',
+    balancingWindow: 'Balancing Window',
+    manufacturer: 'Manufacturer',
+    deviceName: 'Device Name',
+    serialNumber: 'Serial Number',
+    mfgDate: 'Manufacturing Date'
   }
 };

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -19,7 +18,7 @@ export function BluetoothConnector() {
   const router = useRouter();
   const { user } = useUser();
   const db = useFirestore();
-  const { addDirectBluetoothDevice, devices, isDemoMode, addNetworkDevice } = useBmsStore();
+  const { addDirectBluetoothDevice, devices, isDemoMode, addNetworkDevice, t } = useBmsStore();
   const [isScanning, setIsScanning] = useState(false);
   const [espName, setEspName] = useState("");
   const [error, setError] = useState<{title: string, message: string, isSecurity: boolean} | null>(null);
@@ -27,13 +26,11 @@ export function BluetoothConnector() {
   const handleIdentifyAndConnect = async (deviceName: string) => {
     if (!user || !db) return;
 
-    // 1. Спробуємо ідентифікувати модель через ШІ
     try {
       const identification = await identifyBmsModel({ deviceName });
       const insightId = identification.modelName.replace(/\s+/g, '_').toLowerCase();
       const insightRef = doc(db, 'users', user.uid, 'modelInsights', insightId);
       
-      // Логуємо знання ШІ в базу даних
       const docSnap = await getDoc(insightRef);
       if (docSnap.exists()) {
         setDocumentNonBlocking(insightRef, {
@@ -54,8 +51,8 @@ export function BluetoothConnector() {
       }
 
       toast({
-        title: `ШІ ідентифікував: ${identification.modelName}`,
-        description: `Використовується протокол ${identification.protocol}. База знань оновлена.`,
+        title: `${t('aiModelIdentified')}: ${identification.modelName}`,
+        description: `Protocol: ${identification.protocol}. AI Base updated.`,
       });
     } catch (e) {
       console.warn("AI Identification failed, connecting as generic device");
@@ -76,7 +73,7 @@ export function BluetoothConnector() {
       }
 
       if (typeof window !== 'undefined' && !navigator.bluetooth) {
-        throw new Error("Ваш браузер не підтримує Web Bluetooth.");
+        throw new Error(t('toastScanError') + ": Browser not supported.");
       }
 
       const device = await navigator.bluetooth.requestDevice({
@@ -91,7 +88,7 @@ export function BluetoothConnector() {
     } catch (err: any) {
       const isSecurity = err.name === 'SecurityError' || err.message.includes('Permissions-Policy');
       setError({ 
-        title: isSecurity ? "Доступ обмежено" : "Помилка", 
+        title: isSecurity ? "Access Denied" : "Error", 
         message: err.message, 
         isSecurity 
       });
@@ -116,7 +113,7 @@ export function BluetoothConnector() {
             {error.message}
             {error.isSecurity && (
               <Button variant="link" className="p-0 h-auto text-destructive underline block mt-2" onClick={() => window.open(window.location.href, '_blank')}>
-                Відкрити в новій вкладці
+                Open in new tab
               </Button>
             )}
           </AlertDescription>
@@ -129,13 +126,13 @@ export function BluetoothConnector() {
             <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 mb-2">
               <Bluetooth className="h-6 w-6" />
             </div>
-            <CardTitle>Прямий BLE доступ</CardTitle>
-            <CardDescription>ШІ навчиться розпізнавати ваше залізо.</CardDescription>
+            <CardTitle>{t('bleDirectAccess')}</CardTitle>
+            <CardDescription>{t('bleAiLearn')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-secondary/20 rounded-lg p-3 text-[10px] space-y-1 opacity-70">
-              <p className="flex items-center gap-1"><BrainCircuit className="h-3 w-3" /> Автоматичне визначення моделі</p>
-              <p className="flex items-center gap-1"><Database className="h-3 w-3" /> Наповнення бази знань</p>
+              <p className="flex items-center gap-1"><BrainCircuit className="h-3 w-3" /> {t('bleAutoDetect')}</p>
+              <p className="flex items-center gap-1"><Database className="h-3 w-3" /> {t('bleFillKnowledge')}</p>
             </div>
             <Button 
               size="lg" 
@@ -144,7 +141,7 @@ export function BluetoothConnector() {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isScanning ? <Search className="h-4 w-4 mr-2 animate-spin" /> : <Bluetooth className="h-4 w-4 mr-2" />}
-              {isDemoMode ? "Симулювати BLE" : "Сканувати"}
+              {isDemoMode ? "Simulate BLE" : t('scan')}
             </Button>
           </CardContent>
         </Card>
@@ -154,17 +151,17 @@ export function BluetoothConnector() {
             <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent mb-2">
               <Globe className="h-6 w-6" />
             </div>
-            <CardTitle>Мережа ESP32</CardTitle>
-            <CardDescription>Моніторинг через Wi-Fi Хаб.</CardDescription>
+            <CardTitle>{t('wifiHub')}</CardTitle>
+            <CardDescription>{t('wifiHubDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-secondary/20 rounded-lg p-3 text-[10px] space-y-1 opacity-70">
-              <p>• Агрегація даних</p>
-              <p>• Віддалений доступ 24/7</p>
+              <p>• {t('wifiAggregation')}</p>
+              <p>• {t('wifiRemoteAccess')}</p>
             </div>
             <div className="flex gap-2">
               <Input 
-                placeholder="Назва..." 
+                placeholder="Name..." 
                 value={espName} 
                 onChange={(e) => setEspName(e.target.value)}
                 className="bg-secondary/30 border-none h-10 text-sm"
