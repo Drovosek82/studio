@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { Toaster } from '@/components/ui/toaster';
+import { BmsProvider } from '@/lib/bms-context';
 
 export const metadata: Metadata = {
   title: 'BMS Monitor | ESP32 & JBD BMS',
@@ -22,8 +23,10 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased bg-background text-foreground">
         <FirebaseClientProvider>
-          {children}
-          <Toaster />
+          <BmsProvider>
+            {children}
+            <Toaster />
+          </BmsProvider>
         </FirebaseClientProvider>
       </body>
     </html>
