@@ -4,7 +4,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BatteryData, HistoricalRecord, BatteryDevice } from './types';
 
-let globalDevices: BatteryDevice[] = [
+// Початкові демо-дані для ініціалізації
+const DEMO_DEVICES: BatteryDevice[] = [
   { id: 'BMS_01', name: 'Battery Pack A', type: 'ESP32', status: 'Online' },
   { id: 'BMS_02', name: 'Battery Pack B', type: 'ESP32', status: 'Online' }
 ];
@@ -12,6 +13,7 @@ let globalDevices: BatteryDevice[] = [
 let globalRealTimeData: Record<string, BatteryData> = {};
 let globalHistory: Record<string, HistoricalRecord[]> = {};
 let globalIsDemoMode = true;
+let globalDevices: BatteryDevice[] = globalIsDemoMode ? [...DEMO_DEVICES] : [];
 
 export function useBmsStore() {
   const [devices, setDevices] = useState<BatteryDevice[]>(globalDevices);
@@ -23,89 +25,108 @@ export function useBmsStore() {
   const setDemoMode = (val: boolean) => {
     globalIsDemoMode = val;
     setIsDemoModeState(val);
+    
+    if (!val) {
+      // Очищаємо всі дані при вимкненні демо
+      globalDevices = [];
+      globalRealTimeData = {};
+      globalHistory = {};
+      setDevices([]);
+      setRealTimeData({});
+      setHistory({});
+    } else {
+      // Повертаємо демо-дані при увімкненні
+      globalDevices = [...DEMO_DEVICES];
+      setDevices(globalDevices);
+      initializeDemoData();
+    }
+  };
+
+  const initializeDemoData = () => {
+    const initialData: Record<string, BatteryData> = {};
+    const initialHistory: Record<string, HistoricalRecord[]> = {};
+
+    DEMO_DEVICES.forEach(dev => {
+      initialData[dev.id] = {
+        id: dev.id,
+        name: dev.name,
+        totalVoltage: 52.4,
+        totalCurrent: 2.5,
+        temperatures: [25.0, 26.2, 24.8],
+        stateOfCharge: 85,
+        protectionStatus: 'Нормально',
+        cellVoltages: Array(14).fill(0).map(() => 3.742 + (Math.random() - 0.5) * 0.01),
+        balancingCells: Array(14).fill(false),
+        lastUpdated: new Date().toISOString(),
+        capacityAh: 100,
+        cycleCount: 42,
+        isChargeEnabled: true,
+        isDischargeEnabled: true,
+        isBalancingActive: false,
+        balancingMode: 'charge',
+        eeprom: {
+          design_cap: 10000,
+          cycle_cap: 10000,
+          cap_100: 4150,
+          cap_80: 4000,
+          cap_60: 3850,
+          cap_40: 3750,
+          cap_20: 3600,
+          cap_0: 3000,
+          dsg_rate: 10,
+          covp: 4250,
+          covp_rel: 4150,
+          cuvp: 2700,
+          cuvp_rel: 3000,
+          povp: 5880,
+          povp_rel: 5600,
+          puvp: 4200,
+          puvp_rel: 4500,
+          chgot: 3231,
+          chgot_rel: 3181,
+          chgut: 2731,
+          chgut_rel: 2781,
+          dsgot: 3381,
+          dsgot_rel: 3331,
+          dsgut: 2531,
+          dsgut_rel: 2581,
+          cell_v_delays: 2,
+          pack_v_delays: 2,
+          chg_t_delays: 2,
+          dsg_t_delays: 2,
+          chgoc: 5000,
+          dsgoc: 10000,
+          chgoc_delays: 5,
+          dsgoc_delays: 5,
+          bal_start: 3400,
+          bal_window: 50,
+          shunt_res: 100,
+          cell_cnt: 14,
+          ntc_cnt: 3,
+          mfg_name: "JBD-BMS",
+          device_name: "Smart-BMS-01",
+          serial_num: "20240501-A",
+          mfg_date: "2024-05-01"
+        }
+      };
+
+      initialHistory[dev.id] = Array(50).fill(0).map((_, i) => ({
+        timestamp: new Date(Date.now() - (50 - i) * 60000).toISOString(),
+        totalVoltage: 52.0 + Math.random() * 0.8,
+        totalCurrent: 1.0 + Math.random() * 5,
+        stateOfCharge: 80 + (i / 50) * 5,
+      }));
+    });
+
+    globalRealTimeData = initialData;
+    globalHistory = initialHistory;
+    setRealTimeData({ ...initialData });
+    setHistory({ ...initialHistory });
   };
 
   useEffect(() => {
     if (isDemoMode && Object.keys(globalRealTimeData).length === 0) {
-      const initialData: Record<string, BatteryData> = {};
-      const initialHistory: Record<string, HistoricalRecord[]> = {};
-
-      globalDevices.forEach(dev => {
-        initialData[dev.id] = {
-          id: dev.id,
-          name: dev.name,
-          totalVoltage: 52.4,
-          totalCurrent: 2.5,
-          temperatures: [25.0, 26.2, 24.8],
-          stateOfCharge: 85,
-          protectionStatus: 'Нормально',
-          cellVoltages: Array(14).fill(0).map(() => 3.742 + (Math.random() - 0.5) * 0.01),
-          balancingCells: Array(14).fill(false),
-          lastUpdated: new Date().toISOString(),
-          capacityAh: 100,
-          cycleCount: 42,
-          isChargeEnabled: true,
-          isDischargeEnabled: true,
-          isBalancingActive: false,
-          balancingMode: 'charge',
-          eeprom: {
-            design_cap: 10000,
-            cycle_cap: 10000,
-            cap_100: 4150,
-            cap_80: 4000,
-            cap_60: 3850,
-            cap_40: 3750,
-            cap_20: 3600,
-            cap_0: 3000,
-            dsg_rate: 10,
-            covp: 4250,
-            covp_rel: 4150,
-            cuvp: 2700,
-            cuvp_rel: 3000,
-            povp: 5880,
-            povp_rel: 5600,
-            puvp: 4200,
-            puvp_rel: 4500,
-            chgot: 3231,
-            chgot_rel: 3181,
-            chgut: 2731,
-            chgut_rel: 2781,
-            dsgot: 3381,
-            dsgot_rel: 3331,
-            dsgut: 2531,
-            dsgut_rel: 2581,
-            cell_v_delays: 2,
-            pack_v_delays: 2,
-            chg_t_delays: 2,
-            dsg_t_delays: 2,
-            chgoc: 5000,
-            dsgoc: 10000,
-            chgoc_delays: 5,
-            dsgoc_delays: 5,
-            bal_start: 3400,
-            bal_window: 50,
-            shunt_res: 100,
-            cell_cnt: 14,
-            ntc_cnt: 3,
-            mfg_name: "JBD-BMS",
-            device_name: "Smart-BMS-01",
-            serial_num: "20240501-A",
-            mfg_date: "2024-05-01"
-          }
-        };
-
-        initialHistory[dev.id] = Array(50).fill(0).map((_, i) => ({
-          timestamp: new Date(Date.now() - (50 - i) * 60000).toISOString(),
-          totalVoltage: 52.0 + Math.random() * 0.8,
-          totalCurrent: 1.0 + Math.random() * 5,
-          stateOfCharge: 80 + (i / 50) * 5,
-        }));
-      });
-
-      globalRealTimeData = initialData;
-      globalHistory = initialHistory;
-      setRealTimeData({ ...initialData });
-      setHistory({ ...initialHistory });
+      initializeDemoData();
     }
   }, [isDemoMode]);
 
