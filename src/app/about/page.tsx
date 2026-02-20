@@ -18,7 +18,9 @@ import {
   Share2,
   ExternalLink,
   Menu,
-  MousePointer2
+  MousePointer2,
+  CreditCard,
+  CheckCircle2
 } from "lucide-react";
 
 export default function AboutPage() {
@@ -76,41 +78,65 @@ export default function AboutPage() {
           </p>
         </section>
 
+        {/* Секція про тарифний план */}
+        <section className="p-8 bg-amber-500/10 rounded-2xl border border-amber-500/20 space-y-6">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-amber-500" />
+            Чи це безкоштовно? (Про план Blaze)
+          </h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Для роботи ШІ та хостингу Next.js потрібен план <b>Blaze (Pay-as-you-go)</b>. Це вимагає прив'язки картки, але для тестування з друзями ви, швидше за все, <b>нічого не платитимете</b>:
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-2 p-3 bg-background/50 rounded-lg border border-border/50">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span className="text-xs">2M запитів/міс безкоштовно</span>
+            </div>
+            <div className="flex items-center gap-2 p-3 bg-background/50 rounded-lg border border-border/50">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span className="text-xs">Великі ліміти для ШІ</span>
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground italic">
+            * Ви платите тільки якщо ваш додаток почне використовувати ресурси понад величезні безкоштовні ліміти.
+          </p>
+        </section>
+
         <section className="p-8 bg-blue-500/10 rounded-2xl border border-blue-500/20 space-y-6">
           <h3 className="text-xl font-bold flex items-center gap-2">
             <Share2 className="h-5 w-5 text-blue-500" />
-            Як знайти «App Hosting» у Firebase Console (Інструкція)
+            Як налаштувати з телефону
           </h3>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Оскільки ви з телефону, ось точний шлях, куди натискати:
+            Оскільки ви з телефону, ось покроковий шлях у консолі Firebase:
           </p>
           <div className="space-y-4">
             <div className="flex gap-4 items-start">
               <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">1</div>
               <div>
-                <p className="font-bold text-sm">Відкрийте меню</p>
-                <p className="text-xs text-muted-foreground">У верхньому лівому куті натисніть на іконку «бургер» <Menu className="inline h-3 w-3" /> (три горизонтальні лінії).</p>
+                <p className="font-bold text-sm">Натисніть «Бургер» Меню</p>
+                <p className="text-xs text-muted-foreground">Три лінії <Menu className="inline h-3 w-3" /> у верхньому лівому куті екрана.</p>
               </div>
             </div>
             <div className="flex gap-4 items-start">
               <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">2</div>
               <div>
-                <p className="font-bold text-sm">Розділ Build (Розбудова)</p>
-                <p className="text-xs text-muted-foreground">Знайдіть пункт <b>Build</b> (або Розбудова) — там зазвичай іконка молотка або стіни.</p>
+                <p className="font-bold text-sm">Build (Розбудова)</p>
+                <p className="text-xs text-muted-foreground">Натисніть на <b>Build</b> — відкриється список сервісів.</p>
               </div>
             </div>
             <div className="flex gap-4 items-start">
               <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">3</div>
               <div>
                 <p className="font-bold text-sm">App Hosting</p>
-                <p className="text-xs text-muted-foreground">Натисніть на <b>App Hosting</b> (це майже в самому низу списку Build).</p>
+                <p className="text-xs text-muted-foreground">Це майже останній пункт у списку Build. Натисніть його.</p>
               </div>
             </div>
             <div className="flex gap-4 items-start">
               <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">4</div>
               <div>
-                <p className="font-bold text-sm">Get Started & Connect</p>
-                <p className="text-xs text-muted-foreground">Натисніть синю кнопку <b>Get started</b>, а потім кнопку <b>Connect to GitHub</b> <MousePointer2 className="inline h-3 w-3" />.</p>
+                <p className="font-bold text-sm">Підключіть GitHub</p>
+                <p className="text-xs text-muted-foreground">Натисніть <b>Get started</b> та <b>Connect to GitHub</b> <MousePointer2 className="inline h-3 w-3" />.</p>
               </div>
             </div>
           </div>
