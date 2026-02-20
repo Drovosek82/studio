@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useMemo, useEffect, useState } from "react";
@@ -8,6 +7,7 @@ import { DashboardHeader } from "@/components/bms/dashboard-header";
 import { CellGrid } from "@/components/bms/cell-grid";
 import { HistoryCharts } from "@/components/bms/history-charts";
 import { AiAnalysis } from "@/components/bms/ai-analysis";
+import { RawPacketDebugger } from "@/components/bms/raw-packet-debugger";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -27,14 +27,11 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
   const { id } = use(params);
   const { allData, history, toggleControl, setBalancingMode, isLoading: isContextLoading } = useBmsStore();
   
-  // Локальний стан для очікування синхронізації контексту
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Використовуємо useMemo для пошуку даних
   const data = useMemo(() => allData[id], [allData, id]);
   const activeHistory = useMemo(() => history[id] || [], [history, id]);
 
-  // Невелике очікування при першому рендері, щоб контекст встиг "прокинутись"
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitializing(false);
@@ -42,7 +39,6 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
     return () => clearTimeout(timer);
   }, [id]);
 
-  // Стан завантаження
   if ((isContextLoading || isInitializing) && !data) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background text-foreground">
@@ -52,7 +48,6 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
     );
   }
 
-  // Якщо дані завантажені, але батареї справді немає в об'єкті allData
   if (!data) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background text-foreground">
@@ -61,7 +56,6 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
           <h2 className="text-2xl font-bold">Батарею не знайдено</h2>
           <p className="text-sm text-muted-foreground max-w-xs mx-auto">
             Пристрій <code className="bg-secondary px-1 rounded">{id}</code> не виявлено в системі. 
-            Перевірте підключення у вкладці "Підключення".
           </p>
         </div>
         <Link href="/">
@@ -107,6 +101,7 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
              <HistoryCharts history={activeHistory} />
+             {id.startsWith('BLE_') && <RawPacketDebugger />}
           </div>
           <div className="space-y-6">
              <div className="glass-card p-6 rounded-xl space-y-6">
@@ -117,12 +112,10 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
                 
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        <Zap className={`h-4 w-4 ${data.isChargeEnabled ? 'text-green-500' : 'text-muted-foreground'}`} />
-                        Заряд
-                      </Label>
-                    </div>
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Zap className={`h-4 w-4 ${data.isChargeEnabled ? 'text-green-500' : 'text-muted-foreground'}`} />
+                      Заряд
+                    </Label>
                     <Switch 
                       checked={data.isChargeEnabled} 
                       onCheckedChange={() => toggleControl(id, 'isChargeEnabled')}
@@ -130,12 +123,10 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        <Power className={`h-4 w-4 ${data.isDischargeEnabled ? 'text-green-500' : 'text-muted-foreground'}`} />
-                        Розряд
-                      </Label>
-                    </div>
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Power className={`h-4 w-4 ${data.isDischargeEnabled ? 'text-green-500' : 'text-muted-foreground'}`} />
+                      Розряд
+                    </Label>
                     <Switch 
                       checked={data.isDischargeEnabled} 
                       onCheckedChange={() => toggleControl(id, 'isDischargeEnabled')}
@@ -144,59 +135,20 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
 
                   <div className="border-t border-border/50 pt-4 space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                          <Activity className={`h-4 w-4 ${data.isBalancingActive ? 'text-accent' : 'text-muted-foreground'}`} />
-                          Балансування
-                        </Label>
-                      </div>
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Activity className={`h-4 w-4 ${data.isBalancingActive ? 'text-accent' : 'text-muted-foreground'}`} />
+                        Балансування
+                      </Label>
                       <Switch 
                         checked={data.isBalancingActive} 
                         onCheckedChange={() => toggleControl(id, 'isBalancingActive')}
                       />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">Режим балансира</Label>
-                      <Select 
-                        value={data.balancingMode} 
-                        onValueChange={(val: any) => setBalancingMode(id, val)}
-                        disabled={!data.isBalancingActive}
-                      >
-                        <SelectTrigger className="bg-secondary/30 border-none h-8 text-xs">
-                          <SelectValue placeholder="Оберіть режим" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-card border-border">
-                          <SelectItem value="charge">При зарядці</SelectItem>
-                          <SelectItem value="static">Постійно</SelectItem>
-                          <SelectItem value="always">Розумний</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                   </div>
                 </div>
              </div>
 
              <AiAnalysis currentData={data} history={activeHistory} />
-             
-             <div className="glass-card p-6 rounded-xl space-y-4">
-                <h3 className="text-lg font-bold flex items-center gap-2">
-                  <Info className="h-5 w-5 text-accent" />
-                  Параметри системи
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Статус:</span>
-                    <span className={data.isBalancingActive ? "text-accent font-medium flex items-center gap-1" : "text-muted-foreground"}>
-                      {data.isBalancingActive ? "Вирівнювання..." : "Спокій"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Циклів:</span>
-                    <span className="text-white font-medium">{data.cycleCount}</span>
-                  </div>
-                </div>
-             </div>
           </div>
         </div>
       </div>
