@@ -1,16 +1,18 @@
+
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useBmsStore } from "@/lib/bms-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -24,17 +26,13 @@ import {
 import { 
   ArrowLeft, 
   Save, 
-  AlertTriangle, 
-  Zap, 
-  Thermometer, 
-  Database, 
-  Activity, 
-  Wrench,
-  Settings2,
-  Shield,
-  Info,
-  Clock,
-  Loader2
+  Shield, 
+  Loader2,
+  Settings,
+  Zap,
+  Activity,
+  Thermometer,
+  Database
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -54,6 +52,7 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
     setShowAuthDialog(false);
     setIsLoading(true);
     
+    // Disable MOSFETs for safety if active
     if (data?.isChargeEnabled) toggleControl(id, 'isChargeEnabled');
     if (data?.isDischargeEnabled) toggleControl(id, 'isDischargeEnabled');
     
@@ -70,7 +69,7 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
     }, 1500);
   };
 
-  const handleInputChange = (key: string, value: string) => {
+  const handleInputChange = (key: string, value: any) => {
     setLocalSettings(prev => ({ ...prev, [key]: value }));
   };
 
@@ -88,6 +87,32 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
       router.push(`/battery/${id}`);
     }, 2000);
   };
+
+  // Групуємо параметри за категоріями (від ШІ або стандартні)
+  const categories = useMemo(() => {
+    const params = data?.modelInsight?.supportedEepromParams || [];
+    if (params.length === 0) {
+      // Стандартний набір, якщо ШІ ще не визначив модель
+      return {
+        "Protection": [
+          { id: 'covp', label: 'Cell Over Voltage', unit: 'mV', type: 'number' },
+          { id: 'cuvp', label: 'Cell Under Voltage', unit: 'mV', type: 'number' },
+        ],
+        "General": [
+          { id: 'ntc_cnt', label: 'NTC Count', type: 'number' },
+          { id: 'bal_start', label: 'Balance Start', unit: 'mV', type: 'number' },
+        ]
+      };
+    }
+
+    const grouped: Record<string, any[]> = {};
+    params.forEach(p => {
+      const cat = p.category || "General";
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(p);
+    });
+    return grouped;
+  }, [data]);
 
   if (!data) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -127,7 +152,9 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
             </Link>
             <div>
               <h1 className="text-xl font-bold tracking-tight">{t('eepromTitle')}</h1>
-              <p className="text-[10px] uppercase font-bold text-accent opacity-70 tracking-widest">{data.name}</p>
+              <p className="text-[10px] uppercase font-bold text-accent opacity-70 tracking-widest">
+                {data.modelInsight?.modelName || data.name}
+              </p>
             </div>
           </div>
           <Button 
@@ -136,175 +163,78 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
             className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {isSaving ? "..." : t('saveExit')}
+            {t('saveExit')}
           </Button>
         </div>
       </header>
 
-      {isLoading ? (
-        <div className="max-w-6xl mx-auto px-4 pt-20 flex flex-col items-center justify-center gap-4">
-          <Loader2 className="h-12 w-12 animate-spin text-accent" />
-          <p className="text-muted-foreground animate-pulse">Reading BMS Registers...</p>
-        </div>
-      ) : isAuthorized ? (
+      {isAuthorized && (
         <div className="max-w-6xl mx-auto px-4 pt-8">
-          <Tabs defaultValue="voltages" className="space-y-6">
+          <Tabs defaultValue={Object.keys(categories)[0]} className="space-y-6">
             <ScrollArea className="w-full whitespace-nowrap rounded-md border border-border/50 bg-secondary/20">
               <TabsList className="bg-transparent h-12 inline-flex p-1">
-                <TabsTrigger value="voltages" className="gap-2 px-4"><Zap className="h-4 w-4" /> {t('voltage')}</TabsTrigger>
-                <TabsTrigger value="currents" className="gap-2 px-4"><Activity className="h-4 w-4" /> {t('current')}</TabsTrigger>
-                <TabsTrigger value="temps" className="gap-2 px-4"><Thermometer className="h-4 w-4" /> {t('temp')}</TabsTrigger>
-                <TabsTrigger value="capacity_soc" className="gap-2 px-4"><Database className="h-4 w-4" /> {t('capacitySoc')}</TabsTrigger>
-                <TabsTrigger value="config" className="gap-2 px-4"><Settings2 className="h-4 w-4" /> {t('settings')}</TabsTrigger>
-                <TabsTrigger value="info" className="gap-2 px-4"><Info className="h-4 w-4" /> {t('deviceInfo')}</TabsTrigger>
-                <TabsTrigger value="calibration" className="gap-2 px-4"><Wrench className="h-4 w-4" /> {t('calibration')}</TabsTrigger>
+                {Object.keys(categories).map(cat => (
+                  <TabsTrigger key={cat} value={cat} className="gap-2 px-4 capitalize">
+                    {cat === 'Protection' ? <Shield className="h-4 w-4" /> : 
+                     cat === 'Voltage' ? <Zap className="h-4 w-4" /> :
+                     cat === 'Current' ? <Activity className="h-4 w-4" /> :
+                     <Settings className="h-4 w-4" />}
+                    {cat}
+                  </TabsTrigger>
+                ))}
               </TabsList>
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
 
-            <TabsContent value="voltages" className="space-y-4">
-              <Card className="glass-card border-none">
-                <CardHeader>
-                  <CardTitle className="text-lg">{t('cellProtection')}</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>COVP (Cell Over Voltage)</Label>
-                    <Input value={localSettings.covp || ""} onChange={(e) => handleInputChange('covp', e.target.value)} className="bg-secondary/30" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>COVP Release</Label>
-                    <Input value={localSettings.covp_rel || ""} onChange={(e) => handleInputChange('covp_rel', e.target.value)} className="bg-secondary/30" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>CUVP (Cell Under Voltage)</Label>
-                    <Input value={localSettings.cuvp || ""} onChange={(e) => handleInputChange('cuvp', e.target.value)} className="bg-secondary/30" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>CUVP Release</Label>
-                    <Input value={localSettings.cuvp_rel || ""} onChange={(e) => handleInputChange('cuvp_rel', e.target.value)} className="bg-secondary/30" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Clock className="h-3 w-3" /> {t('cellVoltageDelay')} (s)</Label>
-                    <Input value={localSettings.cell_v_delays || "2"} onChange={(e) => handleInputChange('cell_v_delays', e.target.value)} className="bg-secondary/30" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="glass-card border-none">
-                <CardHeader>
-                  <CardTitle className="text-lg">{t('packProtection')}</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>POVP (Pack Over Voltage)</Label>
-                    <Input value={localSettings.povp || ""} onChange={(e) => handleInputChange('povp', e.target.value)} className="bg-secondary/30" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>PUVP (Pack Under Voltage)</Label>
-                    <Input value={localSettings.puvp || ""} onChange={(e) => handleInputChange('puvp', e.target.value)} className="bg-secondary/30" />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="currents" className="space-y-4">
-              <Card className="glass-card border-none">
-                <CardHeader>
-                  <CardTitle className="text-lg">{t('currentProtection')}</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>CHGOC (Charge Over Current)</Label>
-                    <Input value={localSettings.chgoc || ""} onChange={(e) => handleInputChange('chgoc', e.target.value)} className="bg-secondary/30" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Clock className="h-3 w-3" /> {t('chargeOcDelay')} (s)</Label>
-                    <Input value={localSettings.chgoc_delays || "5"} onChange={(e) => handleInputChange('chgoc_delays', e.target.value)} className="bg-secondary/30" />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="config" className="space-y-4">
-              <Card className="glass-card border-none">
-                <CardHeader>
-                  <CardTitle className="text-lg">{t('generalConfig')}</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>{t('ntcCount')}</Label>
-                    <Select 
-                      value={String(localSettings.ntc_cnt || "3")} 
-                      onValueChange={(val) => handleInputChange('ntc_cnt', val)}
-                    >
-                      <SelectTrigger className="bg-secondary/30 border-none h-10">
-                        <SelectValue placeholder="NTC" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 8 }).map((_, i) => (
-                          <SelectItem key={i + 1} value={String(i + 1)}>{i + 1} NTC</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('balancingStart')} (mV)</Label>
-                    <Input value={localSettings.bal_start || "3400"} onChange={(e) => handleInputChange('bal_start', e.target.value)} className="bg-secondary/30" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('balancingWindow')} (mV)</Label>
-                    <Input value={localSettings.bal_window || "50"} onChange={(e) => handleInputChange('bal_window', e.target.value)} className="bg-secondary/30" />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="info" className="space-y-4">
-              <Card className="glass-card border-none">
-                <CardHeader>
-                  <CardTitle className="text-lg">{t('deviceInfo')}</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>{t('manufacturer')}</Label>
-                    <Input value={localSettings.mfg_name || ""} onChange={(e) => handleInputChange('mfg_name', e.target.value)} className="bg-secondary/30" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('deviceName')}</Label>
-                    <Input value={localSettings.device_name || ""} onChange={(e) => handleInputChange('device_name', e.target.value)} className="bg-secondary/30" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('serialNumber')}</Label>
-                    <Input value={localSettings.serial_num || ""} onChange={(e) => handleInputChange('serial_num', e.target.value)} className="bg-secondary/30" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('mfgDate')}</Label>
-                    <Input value={localSettings.mfg_date || ""} onChange={(e) => handleInputChange('mfg_date', e.target.value)} className="bg-secondary/30" type="date" />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+            {Object.entries(categories).map(([cat, params]) => (
+              <TabsContent key={cat} value={cat} className="space-y-4">
+                <Card className="glass-card border-none">
+                  <CardHeader>
+                    <CardTitle className="text-lg">{cat}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {params.map((p: any) => (
+                      <div key={p.id} className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">
+                          {p.label} {p.unit ? `(${p.unit})` : ''}
+                        </Label>
+                        
+                        {p.type === 'select' ? (
+                          <Select 
+                            value={String(localSettings[p.id] || "")} 
+                            onValueChange={(val) => handleInputChange(p.id, val)}
+                          >
+                            <SelectTrigger className="bg-secondary/30 border-none h-10">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {p.options?.map((opt: string) => (
+                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : p.type === 'boolean' ? (
+                          <div className="flex items-center h-10">
+                            <Switch 
+                              checked={!!localSettings[p.id]} 
+                              onCheckedChange={(val) => handleInputChange(p.id, val)} 
+                            />
+                          </div>
+                        ) : (
+                          <Input 
+                            type={p.type === 'number' ? 'number' : 'text'}
+                            value={localSettings[p.id] || ""} 
+                            onChange={(e) => handleInputChange(p.id, e.target.value)} 
+                            className="bg-secondary/30 border-none h-10"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            ))}
           </Tabs>
-
-          <div className="mt-8 flex justify-center gap-4">
-               <Button variant="outline" className="text-muted-foreground border-accent/10 hover:bg-accent/5">
-                  <Shield className="mr-2 h-4 w-4" />
-                  {t('factoryMode')}
-               </Button>
-               <Button 
-                variant="ghost" 
-                className="text-[10px] opacity-50"
-                onClick={() => router.push(`/battery/${id}`)}
-               >
-                  {t('cancel')}
-               </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="max-w-6xl mx-auto px-4 pt-20 flex flex-col items-center justify-center gap-4">
-           <Shield className="h-16 w-16 text-muted-foreground opacity-20" />
-           <p className="text-muted-foreground">Waiting for authorization...</p>
         </div>
       )}
     </main>

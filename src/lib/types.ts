@@ -1,9 +1,19 @@
+
+export interface ParameterDefinition {
+  id: string;
+  label: string;
+  unit?: string;
+  type: 'number' | 'string' | 'boolean' | 'select';
+  options?: string[];
+  category?: string;
+}
+
 export interface BatteryData {
   id: string;
   name: string;
   totalVoltage: number;
   totalCurrent: number;
-  temperatures: number[]; // Оновлено: масив температур для декількох NTC
+  temperatures: number[];
   stateOfCharge: number;
   protectionStatus: string;
   cellVoltages: number[];
@@ -15,7 +25,15 @@ export interface BatteryData {
   isDischargeEnabled: boolean;
   isBalancingActive: boolean;
   balancingMode: 'charge' | 'always' | 'static';
-  eeprom: Record<string, number | string>;
+  eeprom: Record<string, any>;
+  // Поля для динамічного інтерфейсу від ШІ
+  modelInsight?: {
+    modelName: string;
+    manufacturer: string;
+    protocol: string;
+    supportedTelemetry: ParameterDefinition[];
+    supportedEepromParams: ParameterDefinition[];
+  };
 }
 
 export interface HistoricalRecord {
@@ -30,12 +48,4 @@ export interface BatteryDevice {
   name: string;
   type: 'ESP32' | 'Bluetooth';
   status: 'Online' | 'Offline' | 'Connecting';
-}
-
-export interface EepromParam {
-  id: string;
-  name: string;
-  value: number | string;
-  unit: string;
-  reg: string;
 }

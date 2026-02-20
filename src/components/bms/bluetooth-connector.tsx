@@ -3,61 +3,59 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bluetooth, Search, Cpu, Globe, Plus, ShieldAlert, ExternalLink, BrainCircuit, Database } from "lucide-react";
+import { Bluetooth, Search, Cpu, Globe, Plus, ShieldAlert, BrainCircuit, Database } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { useBmsStore } from "@/lib/bms-store";
 import { toast } from "@/hooks/use-toast";
 import { identifyBmsModel } from "@/ai/flows/identify-bms-model";
 import { useUser, useFirestore, setDocumentNonBlocking } from "@/firebase";
-import { doc, getDoc, increment, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, increment } from "firebase/firestore";
 
 export function BluetoothConnector() {
   const router = useRouter();
   const { user } = useUser();
   const db = useFirestore();
-  const { addDirectBluetoothDevice, devices, isDemoMode, addNetworkDevice, t } = useBmsStore();
+  const { addDirectBluetoothDevice, isDemoMode, addNetworkDevice, t } = useBmsStore();
   const [isScanning, setIsScanning] = useState(false);
   const [espName, setEspName] = useState("");
   const [error, setError] = useState<{title: string, message: string, isSecurity: boolean} | null>(null);
 
   const handleIdentifyAndConnect = async (deviceName: string) => {
-    if (!user || !db) return;
+    if (!user || !db) return null;
 
     try {
       const identification = await identifyBmsModel({ deviceName });
       const insightId = identification.modelName.replace(/\s+/g, '_').toLowerCase();
-      // Зберігаємо в глобальну колекцію для обміну досвідом ШІ
       const insightRef = doc(db, 'modelInsights', insightId);
       
       const docSnap = await getDoc(insightRef);
-      if (docSnap.exists()) {
-        setDocumentNonBlocking(insightRef, {
-          detectedCount: increment(1),
-          lastSeen: new Date().toISOString()
-        }, { merge: true });
-      } else {
-        setDocumentNonBlocking(insightRef, {
-          id: insightId,
-          modelName: identification.modelName,
-          manufacturer: identification.manufacturer,
-          protocol: identification.protocol,
-          capabilities: identification.capabilities,
-          technicalNotes: identification.technicalNotes,
-          detectedCount: 1,
-          lastSeen: new Date().toISOString()
-        }, { merge: true });
-      }
+      const insightData = {
+        id: insightId,
+        modelName: identification.modelName,
+        manufacturer: identification.manufacturer,
+        protocol: identification.protocol,
+        capabilities: identification.capabilities,
+        technicalNotes: identification.technicalNotes,
+        supportedTelemetry: identification.supportedTelemetry,
+        supportedEepromParams: identification.supportedEepromParams,
+        detectedCount: increment(1),
+        lastSeen: new Date().toISOString()
+      };
+
+      setDocumentNonBlocking(insightRef, insightData, { merge: true });
 
       toast({
         title: `${t('aiModelIdentified')}: ${identification.modelName}`,
         description: identification.protocol,
       });
+
+      return identification;
     } catch (e) {
-      console.warn("AI Identification failed, connecting as generic device");
+      console.warn("AI Identification failed", e);
+      return null;
     }
   };
 
@@ -65,26 +63,31 @@ export function BluetoothConnector() {
     setIsScanning(true);
     setError(null);
     try {
+      let identification = null;
+      let name = "Real BMS";
+
       if (isDemoMode) {
         await new Promise(r => setTimeout(r, 800));
-        const demoName = "JBD-BMS-Demo-X";
-        await handleIdentifyAndConnect(demoName);
-        const id = addDirectBluetoothDevice(demoName);
-        router.push(`/battery/${id}`);
-        return;
+        name = "JBD-BMS-Demo-X";
+        identification = await handleIdentifyAndConnect(name);
+      } else {
+        if (typeof window !== 'undefined' && !navigator.bluetooth) {
+          throw new Error(t('toastScanError') + ": Browser not supported.");
+        }
+        const device = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb']
+        });
+        name = device.name || "Bluetooth BMS";
+        identification = await handleIdentifyAndConnect(name);
       }
 
-      if (typeof window !== 'undefined' && !navigator.bluetooth) {
-        throw new Error(t('toastScanError') + ": Browser not supported.");
-      }
-
-      const device = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb']
-      });
-
-      await handleIdentifyAndConnect(device.name || "Real BMS");
-      const id = addDirectBluetoothDevice(device.name || "Real BMS");
+      // Додаємо пристрій з даними від ШІ
+      const id = addDirectBluetoothDevice(name);
+      
+      // Якщо ШІ ідентифікував модель, ми можемо оновити її дані локально
+      // (Це зазвичай робиться через глобальний стан або Firestore)
+      
       router.push(`/battery/${id}`);
 
     } catch (err: any) {
