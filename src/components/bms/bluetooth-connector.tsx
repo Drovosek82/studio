@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -10,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useBmsStore } from "@/lib/bms-store";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 
 export function BluetoothConnector() {
