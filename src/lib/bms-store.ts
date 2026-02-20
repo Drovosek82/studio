@@ -40,17 +40,62 @@ export function useBmsStore() {
           capacityAh: 100,
           cycleCount: 42,
           eeprom: {
+            // Capacity & SOC
             design_cap: 10000,
             cycle_cap: 10000,
+            cap_100: 4150,
+            cap_80: 4000,
+            cap_60: 3850,
+            cap_40: 3750,
+            cap_20: 3600,
+            cap_0: 3000,
+            dsg_rate: 10,
+            // Voltages
             covp: 4250,
             covp_rel: 4150,
             cuvp: 2700,
             cuvp_rel: 3000,
             povp: 5880,
             puvp: 4200,
+            povp_rel: 5600,
+            puvp_rel: 4400,
+            // Currents
+            chgoc: 5000,
+            dsgoc: 10000,
+            // Temps
             chgot: 3231,
+            chgot_rel: 3181,
+            chgut: 2731,
+            chgut_rel: 2781,
             dsgot: 3381,
-            cell_cnt: 14
+            dsgot_rel: 3331,
+            dsgut: 2531,
+            dsgut_rel: 2631,
+            // Config
+            bal_start: 3400,
+            bal_window: 50,
+            shunt_res: 100,
+            cell_cnt: 14,
+            func_config: 0x0001,
+            ntc_config: 0x0003,
+            // Calibration (Demo init)
+            cell_cal_1: 3740,
+            cell_cal_2: 3740,
+            cell_cal_3: 3740,
+            cell_cal_4: 3740,
+            cell_cal_5: 3740,
+            cell_cal_6: 3740,
+            cell_cal_7: 3740,
+            cell_cal_8: 3740,
+            cell_cal_9: 3740,
+            cell_cal_10: 3740,
+            cell_cal_11: 3740,
+            cell_cal_12: 3740,
+            cell_cal_13: 3740,
+            cell_cal_14: 3740,
+            idle_current_cal: 0,
+            charge_current_cal: 1000,
+            discharge_current_cal: 1000
           }
         };
 
