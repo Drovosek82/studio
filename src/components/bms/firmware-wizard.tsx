@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, Cpu, Wifi, Shield, Code, Loader2, Globe, User, Bluetooth, Layers, Monitor, Radio, Tv } from "lucide-react";
+import { Download, Cpu, Wifi, Shield, Code, Loader2, Globe, User, Bluetooth, Layers, Monitor, Radio, Tv, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +30,17 @@ export function FirmwareWizard() {
     const randomId = Math.random().toString(36).substr(2, 4).toUpperCase();
     setDeviceId(`BMS_${mode.toUpperCase()}_${randomId}`);
   }, [mode]);
+
+  // Якщо вибрано ESP8266, перемикаємо на режим "display", бо Bluetooth там немає
+  useEffect(() => {
+    if (espModel === 'esp8266' && mode === 'bridge') {
+      setMode('display');
+      toast({
+        title: "MCU обмеження",
+        description: "ESP8266 не має Bluetooth, тому доступний лише режим екрана.",
+      });
+    }
+  }, [espModel, mode, toast]);
 
   const handleGenerate = async () => {
     if (!ssid || !password || !deviceId || (mode === 'bridge' && !bmsIdentifier)) {
@@ -116,7 +127,7 @@ export function FirmwareWizard() {
       <CardContent className="space-y-6">
         <Tabs value={mode} onValueChange={(val: any) => setMode(val)} className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-secondary/50">
-            <TabsTrigger value="bridge" className="gap-2">
+            <TabsTrigger value="bridge" className="gap-2" disabled={espModel === 'esp8266'}>
               <Radio className="h-4 w-4" /> Вузол (Міст)
             </TabsTrigger>
             <TabsTrigger value="display" className="gap-2">
@@ -125,19 +136,27 @@ export function FirmwareWizard() {
           </TabsList>
         </Tabs>
 
+        {espModel === 'esp8266' && mode === 'bridge' && (
+          <div className="flex items-center gap-2 text-red-400 bg-red-500/10 p-3 rounded-lg text-xs">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+            ESP8266 не підтримує Bluetooth. Виберіть ESP32 для режиму моста.
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
-              <Cpu className="h-4 w-4" /> Модель ESP32
+              <Cpu className="h-4 w-4" /> Модель MCU
             </Label>
             <Select value={espModel} onValueChange={setEspModel}>
               <SelectTrigger className="bg-secondary/50 border-none">
                 <SelectValue placeholder="Оберіть чіп" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="esp32c3">ESP32-C3 (Single Antenna)</SelectItem>
-                <SelectItem value="esp32s3">ESP32-S3 (Dual Core)</SelectItem>
-                <SelectItem value="esp32">ESP32 Classic (Dual Core)</SelectItem>
+                <SelectItem value="esp32c3">ESP32-C3</SelectItem>
+                <SelectItem value="esp32s3">ESP32-S3</SelectItem>
+                <SelectItem value="esp32">ESP32 Classic</SelectItem>
+                <SelectItem value="esp8266">ESP8266 (Тільки екран)</SelectItem>
               </SelectContent>
             </Select>
           </div>

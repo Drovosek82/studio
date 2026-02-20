@@ -1,29 +1,29 @@
 'use server';
 /**
- * @fileOverview A Genkit flow for generating personalized ESP32 firmware (.ino file).
+ * @fileOverview A Genkit flow for generating personalized ESP32/ESP8266 firmware (.ino file).
  * Supports two modes: 
- * 1. Bridge: BMS -> ESP32 -> Cloud (via BLE & Wi-Fi)
- * 2. Display: Cloud -> ESP32 -> OLED/LCD Screen (via Wi-Fi)
+ * 1. Bridge: BMS -> ESP32 -> Cloud (via BLE & Wi-Fi) - ESP32 only
+ * 2. Display: Cloud -> ESP32/ESP8266 -> OLED/LCD Screen (via Wi-Fi)
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const GenerateEsp32FirmwareInputSchema = z.object({
-  mode: z.enum(['bridge', 'display']).default('bridge').describe('Operation mode of the ESP32 device.'),
-  displayType: z.enum(['none', 'ssd1306', 'sh1106', 'lcd1602', 'custom']).default('none').describe('Type of display connected to the ESP32.'),
+  mode: z.enum(['bridge', 'display']).default('bridge').describe('Operation mode of the device.'),
+  displayType: z.enum(['none', 'ssd1306', 'sh1106', 'lcd1602', 'custom']).default('none').describe('Type of display connected.'),
   customDisplayDescription: z.string().optional().describe('Description of a non-standard display if "custom" is selected.'),
   ssid: z.string().describe('The Wi-Fi network SSID.'),
   password: z.string().describe('The Wi-Fi network password.'),
-  deviceId: z.string().describe('A unique identifier for the ESP32 device.'),
+  deviceId: z.string().describe('A unique identifier for the device.'),
   bmsIdentifier: z.string().optional().describe('The Bluetooth name of the JBD BMS (required for bridge mode).'),
-  espModel: z.enum(['esp32c3', 'esp32s3', 'esp32']).default('esp32c3').describe('The specific ESP32 model.'),
+  espModel: z.enum(['esp32c3', 'esp32s3', 'esp32', 'esp8266']).default('esp32c3').describe('The specific MCU model.'),
   serverUrl: z.string().describe('The API endpoint for data sync.'),
 });
 export type GenerateEsp32FirmwareInput = z.infer<typeof GenerateEsp32FirmwareInputSchema>;
 
 const GenerateEsp32FirmwareOutputSchema = z.object({
-  firmwareContent: z.string().describe('The generated ESP32 firmware content as an .ino file.'),
+  firmwareContent: z.string().describe('The generated firmware content as an .ino file.'),
 });
 export type GenerateEsp32FirmwareOutput = z.infer<typeof GenerateEsp32FirmwareOutputSchema>;
 
@@ -35,8 +35,9 @@ const generateFirmwarePrompt = ai.definePrompt({
   name: 'generateEsp32FirmwarePrompt',
   input: { schema: GenerateEsp32FirmwareInputSchema },
   output: { schema: GenerateEsp32FirmwareOutputSchema },
-  prompt: `You are an expert at generating Arduino firmware for ESP32 (model: {{{espModel}}}).
+  prompt: `You are an expert at generating Arduino firmware for {{{espModel}}}.
 
+MCU: {{{espModel}}}
 MODE: {{{mode}}}
 DISPLAY: {{{displayType}}}
 {{#if (eq displayType "custom")}}
@@ -45,7 +46,7 @@ CUSTOM DISPLAY INFO: {{{customDisplayDescription}}}
 
 {{#if (eq mode "bridge")}}
 GOAL: Act as a gateway between JBD BMS and Cloud.
-1. Connect to Wi-Fi "{{{ssid}}}" / "{{{password}}}".
+1. Connect to Wi-Fi using appropriate libraries (WiFi.h for ESP32).
 2. Connect to BMS "{{{bmsIdentifier}}}" via BLE.
 3. Every 10s, read data (0x03 command) and POST JSON to "{{{serverUrl}}}".
 4. Handle radio coexistence for {{{espModel}}}.
@@ -54,7 +55,7 @@ GOAL: Act as a gateway between JBD BMS and Cloud.
 {{/if}}
 {{else}}
 GOAL: Act as a Remote Dashboard Screen for all batteries.
-1. Connect to Wi-Fi "{{{ssid}}}" / "{{{password}}}".
+1. Connect to Wi-Fi using appropriate libraries (ESP8266WiFi.h for ESP8266, WiFi.h for ESP32).
 2. Every 5s, perform an HTTP GET request to "{{{serverUrl}}}".
 3. Expect a JSON response with: totalVoltage, totalCurrent, totalPower, and avgSoC.
 4. Output the data to the Serial monitor and display.
@@ -74,8 +75,9 @@ UI SETUP:
 {{/if}}
 
 Requirements:
-- Use standard Arduino libraries (WiFi, HTTPClient, ArduinoJson, and display-specific libs).
-- Include robust reconnect logic.
+- Use standard Arduino libraries (WiFi/ESP8266WiFi, HTTPClient/ESP8266HTTPClient, ArduinoJson, and display-specific libs).
+- Include robust reconnect logic for Wi-Fi.
+- Note: ESP8266 does NOT support Bluetooth/BLE. If ESP8266 is used for 'bridge', explain the limitation in comments but strictly generated code for 'display' mode if possible.
 - Output ONLY raw .ino code.`,
 });
 
