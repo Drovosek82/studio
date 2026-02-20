@@ -8,6 +8,7 @@ export interface BatteryData {
   protectionStatus: string;
   cellVoltages: number[];
   lastUpdated: string;
+  capacityAh?: number;
 }
 
 export interface HistoricalRecord {
@@ -22,4 +23,12 @@ export interface BatteryDevice {
   name: string;
   type: 'ESP32' | 'Bluetooth';
   status: 'Online' | 'Offline' | 'Connecting';
+}
+
+export interface EepromParam {
+  id: string;
+  name: string;
+  value: number | string;
+  unit: string;
+  reg: string;
 }

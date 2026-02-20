@@ -5,94 +5,70 @@ import { BatteryData, HistoricalRecord, BatteryDevice } from './types';
 
 export function useBmsStore() {
   const [devices, setDevices] = useState<BatteryDevice[]>([
-    { id: 'DEMO_01', name: 'Demo Battery Pack', type: 'Bluetooth', status: 'Online' }
+    { id: 'BMS_01', name: 'Battery Pack A', type: 'ESP32', status: 'Online' },
+    { id: 'BMS_02', name: 'Battery Pack B', type: 'ESP32', status: 'Online' }
   ]);
-  const [activeDeviceId, setActiveDeviceId] = useState<string>('DEMO_01');
+  const [activeDeviceId, setActiveDeviceId] = useState<string>('BMS_01');
   const [realTimeData, setRealTimeData] = useState<Record<string, BatteryData>>({});
   const [history, setHistory] = useState<Record<string, HistoricalRecord[]>>({});
   const [isDemoMode, setIsDemoMode] = useState(true);
 
-  // Initialize demo data
+  // Initialize demo data for multiple devices
   useEffect(() => {
     if (isDemoMode) {
-      const initialData: BatteryData = {
-        id: 'DEMO_01',
-        name: 'Demo Battery Pack',
-        totalVoltage: 52.4,
-        totalCurrent: 2.5,
-        temperature: 24.5,
-        stateOfCharge: 85,
-        protectionStatus: 'Нормально',
-        cellVoltages: Array(14).fill(0).map(() => 3.7 + Math.random() * 0.1),
-        lastUpdated: new Date().toISOString(),
-      };
-      setRealTimeData({ 'DEMO_01': initialData });
-      
-      const initialHistory: HistoricalRecord[] = Array(50).fill(0).map((_, i) => ({
-        timestamp: new Date(Date.now() - (50 - i) * 60000).toISOString(),
-        totalVoltage: 52.0 + Math.random() * 0.8,
-        totalCurrent: 1.0 + Math.random() * 5,
-        stateOfCharge: 80 + (i / 50) * 10,
-      }));
-      setHistory({ 'DEMO_01': initialHistory });
-    }
-  }, [isDemoMode]);
+      const initialData: Record<string, BatteryData> = {};
+      const initialHistory: Record<string, HistoricalRecord[]> = {};
 
-  // Simulate updates for demo mode
-  useEffect(() => {
-    if (!isDemoMode) return;
-
-    const interval = setInterval(() => {
-      setRealTimeData(prev => {
-        const current = prev['DEMO_01'];
-        if (!current) return prev;
-        
-        const newData: BatteryData = {
-          ...current,
-          totalVoltage: current.totalVoltage + (Math.random() - 0.5) * 0.1,
-          totalCurrent: current.totalCurrent + (Math.random() - 0.5) * 0.5,
-          temperature: current.temperature + (Math.random() - 0.5) * 0.2,
-          stateOfCharge: Math.min(100, Math.max(0, current.stateOfCharge + (Math.random() - 0.4) * 0.1)),
-          cellVoltages: current.cellVoltages.map(v => Math.max(3.0, Math.min(4.2, v + (Math.random() - 0.5) * 0.01))),
+      devices.forEach(dev => {
+        initialData[dev.id] = {
+          id: dev.id,
+          name: dev.name,
+          totalVoltage: 52.4 + (Math.random() - 0.5) * 0.2,
+          totalCurrent: 2.0 + Math.random() * 5,
+          temperature: 24.5 + Math.random(),
+          stateOfCharge: 80 + Math.random() * 15,
+          protectionStatus: 'Нормально',
+          cellVoltages: Array(14).fill(0).map(() => 3.7 + Math.random() * 0.1),
           lastUpdated: new Date().toISOString(),
+          capacityAh: 100,
         };
 
-        return { ...prev, 'DEMO_01': newData };
+        initialHistory[dev.id] = Array(50).fill(0).map((_, i) => ({
+          timestamp: new Date(Date.now() - (50 - i) * 60000).toISOString(),
+          totalVoltage: 52.0 + Math.random() * 0.8,
+          totalCurrent: 1.0 + Math.random() * 5,
+          stateOfCharge: 80 + (i / 50) * 10,
+        }));
       });
 
-      setHistory(prev => {
-        const devHistory = prev['DEMO_01'] || [];
-        const currentData = realTimeData['DEMO_01'];
-        if (!currentData) return prev;
+      setRealTimeData(initialData);
+      setHistory(initialHistory);
+    }
+  }, [isDemoMode, devices]);
 
-        const newRecord: HistoricalRecord = {
-          timestamp: new Date().toISOString(),
-          totalVoltage: currentData.totalVoltage,
-          totalCurrent: currentData.totalCurrent,
-          stateOfCharge: currentData.stateOfCharge,
-        };
+  // Aggregated data calculation
+  const getAggregatedData = () => {
+    const activeData = Object.values(realTimeData);
+    if (activeData.length === 0) return null;
 
-        const updated = [...devHistory, newRecord].slice(-500);
-        return { ...prev, 'DEMO_01': updated };
-      });
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [isDemoMode, realTimeData]);
-
-  const addDevice = useCallback((device: BatteryDevice) => {
-    setDevices(prev => [...prev, device]);
-    setActiveDeviceId(device.id);
-  }, []);
+    return {
+      totalVoltage: activeData.reduce((acc, curr) => acc + curr.totalVoltage, 0) / activeData.length, // Average for parallel
+      totalCurrent: activeData.reduce((acc, curr) => acc + curr.totalCurrent, 0), // Sum for parallel
+      avgSoC: activeData.reduce((acc, curr) => acc + curr.stateOfCharge, 0) / activeData.length,
+      deviceCount: activeData.length,
+      totalPower: activeData.reduce((acc, curr) => acc + (curr.totalVoltage * curr.totalCurrent), 0)
+    };
+  };
 
   return {
     devices,
     activeDeviceId,
     setActiveDeviceId,
     currentData: realTimeData[activeDeviceId],
+    allData: realTimeData,
     activeHistory: history[activeDeviceId] || [],
+    aggregated: getAggregatedData(),
     isDemoMode,
     setIsDemoMode,
-    addDevice,
   };
 }
