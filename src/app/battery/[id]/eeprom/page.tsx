@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { 
   ArrowLeft, 
   Save, 
@@ -21,7 +21,6 @@ import {
   Info, 
   Activity, 
   Wrench,
-  ChevronRight,
   Settings2
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -98,15 +97,16 @@ export default function EepromPage({ params }: { params: Promise<{ id: string }>
         </div>
 
         <Tabs defaultValue="voltages" className="space-y-6">
-          <ScrollArea className="w-full">
-            <TabsList className="bg-secondary/40 h-12 inline-flex min-w-full">
-              <TabsTrigger value="voltages" className="gap-2"><Zap className="h-4 w-4" /> Напруга</TabsTrigger>
-              <TabsTrigger value="currents" className="gap-2"><Activity className="h-4 w-4" /> Струм</TabsTrigger>
-              <TabsTrigger value="temps" className="gap-2"><Thermometer className="h-4 w-4" /> Темп.</TabsTrigger>
-              <TabsTrigger value="capacity_soc" className="gap-2"><Database className="h-4 w-4" /> Ємність/SOC</TabsTrigger>
-              <TabsTrigger value="config" className="gap-2"><Settings2 className="h-4 w-4" /> Конфігурація</TabsTrigger>
-              <TabsTrigger value="calibration" className="gap-2"><Wrench className="h-4 w-4" /> Калібрування</TabsTrigger>
+          <ScrollArea className="w-full whitespace-nowrap rounded-md border border-border/50 bg-secondary/20">
+            <TabsList className="bg-transparent h-12 inline-flex p-1">
+              <TabsTrigger value="voltages" className="gap-2 px-4"><Zap className="h-4 w-4" /> Напруга</TabsTrigger>
+              <TabsTrigger value="currents" className="gap-2 px-4"><Activity className="h-4 w-4" /> Струм</TabsTrigger>
+              <TabsTrigger value="temps" className="gap-2 px-4"><Thermometer className="h-4 w-4" /> Темп.</TabsTrigger>
+              <TabsTrigger value="capacity_soc" className="gap-2 px-4"><Database className="h-4 w-4" /> Ємність/SOC</TabsTrigger>
+              <TabsTrigger value="config" className="gap-2 px-4"><Settings2 className="h-4 w-4" /> Конфігурація</TabsTrigger>
+              <TabsTrigger value="calibration" className="gap-2 px-4"><Wrench className="h-4 w-4" /> Калібрування</TabsTrigger>
             </TabsList>
+            <ScrollBar orientation="horizontal" />
           </ScrollArea>
 
           <TabsContent value="voltages" className="space-y-4">
