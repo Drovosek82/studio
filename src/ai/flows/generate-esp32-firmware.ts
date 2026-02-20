@@ -1,11 +1,7 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for generating personalized ESP32 firmware (.ino file) 
- * based on the actual JBD BMS serial protocol.
- *
- * - generateEsp32Firmware - A function that handles the firmware generation process.
- * - GenerateEsp32FirmwareInput - The input type for the generateEsp32Firmware function.
- * - GenerateEsp32FirmwareOutput - The return type for the generateEsp32Firmware function.
+ * based on the actual JBD BMS serial protocol with cloud reporting capabilities.
  */
 
 import { ai } from '@/ai/genkit';
@@ -15,6 +11,7 @@ const GenerateEsp32FirmwareInputSchema = z.object({
   ssid: z.string().describe('The Wi-Fi network SSID.'),
   password: z.string().describe('The Wi-Fi network password.'),
   deviceId: z.string().describe('A unique identifier for the ESP32 device.'),
+  serverUrl: z.string().optional().default('https://your-app.com/api/bms/update').describe('The API endpoint to send data to.'),
 });
 export type GenerateEsp32FirmwareInput = z.infer<typeof GenerateEsp32FirmwareInputSchema>;
 
@@ -31,32 +28,39 @@ const generateFirmwarePrompt = ai.definePrompt({
   name: 'generateEsp32FirmwarePrompt',
   input: { schema: GenerateEsp32FirmwareInputSchema },
   output: { schema: GenerateEsp32FirmwareOutputSchema },
-  prompt: `You are an expert at generating ESP32 firmware (.ino files) for JBD BMS monitoring using the official serial protocol.
-Generate a complete Arduino-compatible .ino file for an ESP32-C3 Super Mini.
+  prompt: `You are an expert at generating ESP32-C3 firmware (.ino files) for JBD BMS monitoring.
+The goal is to create a "Cloud Bridge" that reads BMS data and sends it to a central server.
 
-The firmware MUST implement the following JBD BMS protocol specifications:
-1.  **UART Settings**: 9600 baud, 8N1.
-2.  **Packet Structure**: 0xDD [CMD] 0x00 [REG] [LEN] [DATA] [CRC_H] [CRC_L] 0x77.
-3.  **CRC Calculation**: CRC = 0x10000 - sum of bytes from index 1 to (len-4).
-4.  **Commands**:
-    - Basic Info (Reg 0x03): Request packet [0xDD, 0xA5, 0x00, 0x03, 0xFF, 0xFD, 0x77].
-    - Cell Voltages (Reg 0x04): Request packet [0xDD, 0xA5, 0x00, 0x04, 0xFF, 0xFC, 0x77].
-5.  **Data Parsing (Reg 0x03)**:
-    - Total Voltage: (byte[4]<<8 | byte[5]) * 0.01V.
-    - Current: (int16_t)(byte[6]<<8 | byte[7]) * 0.01A.
-    - SoC: byte[21] (%).
-    - Temp: (byte[25]<<8 | byte[26]) / 10.0 - 273.15 (°C).
+Generate a complete Arduino .ino file with these features:
+1. **Wi-Fi Connection**: Connect to SSID "{{{ssid}}}" using password "{{{password}}}".
+2. **JBD BMS Protocol**:
+   - UART: 9600 baud, 8N1.
+   - Request Reg 0x03 (Basic Info) and Reg 0x04 (Cell Voltages).
+   - Parse: Total Voltage, Current, SoC, Temperatures, Protection Status, and individual cell voltages.
+3. **Data Reporting**:
+   - Every 5 seconds, format the parsed data as a JSON object.
+   - Send an HTTP POST request to "{{{serverUrl}}}".
+   - Include "deviceId": "{{{deviceId}}}" in the JSON payload.
+4. **Hardware Specifics**:
+   - Use ESP32-C3 Super Mini pinout. 
+   - Use Hardware Serial (Serial1) for BMS on pins 20 (RX) and 21 (TX) if possible, or SoftwareSerial if needed.
+5. **Error Handling**:
+   - Reconnect Wi-Fi if lost.
+   - Retry BMS request if CRC fails.
+   - Print debug info to Serial (USB).
 
-The generated code should:
-- Connect to Wi-Fi using SSID "{{{ssid}}}" and password "{{{password}}}".
-- Use DEVICE_ID "{{{deviceId}}}".
-- Use Serial for debug and Serial1 (or SoftwareSerial if hardware UART is busy) for BMS communication at 9600 baud.
-- Periodically (every 2s) request 0x03 and 0x04 registers.
-- Print formatted JSON or clear text to Serial for monitoring.
-- Include a robust 'calculateCRC' function.
-- Include error handling for timed-out responses or invalid CRC.
+The JSON payload sent to the server should look like this:
+{
+  "deviceId": "{{{deviceId}}}",
+  "totalVoltage": 52.45,
+  "totalCurrent": 2.5,
+  "soc": 85,
+  "temps": [25.1, 26.0],
+  "cells": [3.74, 3.75, ...],
+  "protection": "Normal"
+}
 
-Output only the raw .ino file content inside the "firmwareContent" field of the JSON object.`,
+Output only the raw .ino file content inside the "firmwareContent" field.`,
 });
 
 const generateEsp32FirmwareFlow = ai.defineFlow(
