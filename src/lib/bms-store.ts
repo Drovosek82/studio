@@ -57,12 +57,34 @@ export function useBmsStore() {
             cuvp: 2700,
             cuvp_rel: 3000,
             povp: 5880,
+            povp_rel: 5600,
             puvp: 4200,
+            puvp_rel: 4500,
+            chgot: 3231,
+            chgot_rel: 3181,
+            chgut: 2731,
+            chgut_rel: 2781,
+            dsgot: 3381,
+            dsgot_rel: 3331,
+            dsgut: 2531,
+            dsgut_rel: 2581,
+            cell_v_delays: 2,
+            pack_v_delays: 2,
+            chg_t_delays: 2,
+            dsg_t_delays: 2,
+            chgoc: 5000,
+            dsgoc: 10000,
+            chgoc_delays: 5,
+            dsgoc_delays: 5,
             bal_start: 3400,
             bal_window: 50,
             shunt_res: 100,
             cell_cnt: 14,
             ntc_cnt: 3,
+            mfg_name: "JBD-BMS",
+            device_name: "Smart-BMS-01",
+            serial_num: "20240501-A",
+            mfg_date: "2024-05-01"
           }
         };
 
@@ -89,6 +111,8 @@ export function useBmsStore() {
         const newData = { ...prev };
         Object.keys(newData).forEach(id => {
           const item = newData[id];
+          if (!item) return;
+
           const currentVariation = (Math.random() - 0.5) * 0.5;
           const voltageVariation = (Math.random() - 0.5) * 0.05;
           
@@ -98,7 +122,6 @@ export function useBmsStore() {
             balancingCells = item.cellVoltages.map(v => v > maxV - 0.005);
           }
 
-          // Коригуємо кількість датчиків температури згідно з EEPROM
           const ntcCount = Number(item.eeprom.ntc_cnt) || 3;
           let newTemps = [...item.temperatures];
           
