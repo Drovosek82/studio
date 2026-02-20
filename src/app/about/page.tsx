@@ -14,7 +14,7 @@ import {
   Info,
   Github,
   Menu,
-  LayoutProject,
+  Layout,
   CheckCircle2,
   CreditCard,
   ExternalLink
@@ -104,7 +104,7 @@ export default function AboutPage() {
               <div className="h-8 w-8 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0 font-bold text-sm shadow-lg shadow-purple-500/20">2</div>
               <div>
                 <p className="font-bold text-lg">Натисніть на іконку Меню</p>
-                <p className="text-sm text-muted-foreground">У самому верху зліва натисніть на три лінії <Menu className="inline h-4 w-4 mx-1" /> або іконку проекту <LayoutProject className="inline h-4 w-4 mx-1" />.</p>
+                <p className="text-sm text-muted-foreground">У самому верху зліва натисніть на три лінії <Menu className="inline h-4 w-4 mx-1" /> або іконку проекту <Layout className="inline h-4 w-4 mx-1" />.</p>
               </div>
             </div>
 
