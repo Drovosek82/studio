@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -17,7 +16,7 @@ import { useUser } from "@/firebase";
 
 export function FirmwareWizard() {
   const { user } = useUser();
-  const [mode, setMode] = useState<'bridge' | 'display' | 'local_server' | 'hub'>('bridge');
+  const [mode, setMode] = useState<'bridge' | 'display' | 'hub'>('bridge');
   const [displayType, setDisplayType] = useState<string>("none");
   const [customDisplayDescription, setCustomDisplayDescription] = useState("");
   const [ssid, setSsid] = useState("");
@@ -36,12 +35,12 @@ export function FirmwareWizard() {
 
   useEffect(() => {
     const randomId = Math.random().toString(36).substr(2, 4).toUpperCase();
-    const modePrefix = mode === 'hub' ? 'HUB' : mode === 'local_server' ? 'SRV' : mode.toUpperCase();
+    const modePrefix = mode === 'hub' ? 'HUB' : mode.toUpperCase();
     setDeviceId(`BMS_${modePrefix}_${randomId}`);
   }, [mode]);
 
   useEffect(() => {
-    if (espModel === 'esp8266' && (mode === 'bridge' || mode === 'local_server' || mode === 'hub')) {
+    if (espModel === 'esp8266' && (mode === 'bridge' || mode === 'hub')) {
       setMode('display');
       toast({
         title: "MCU обмеження",
@@ -100,8 +99,6 @@ export function FirmwareWizard() {
           : `${window.location.origin}/api/bms/aggregated?userId=${user.uid}`;
       } else if (mode === 'hub') {
         serverUrl = "Local Hub Aggregator";
-      } else {
-        serverUrl = "Standalone Local Server";
       }
 
       const result = await generateEsp32Firmware({ 
@@ -111,7 +108,7 @@ export function FirmwareWizard() {
         ssid, 
         password, 
         deviceId,
-        bmsIdentifier: (mode === 'bridge' || mode === 'local_server') ? bmsIdentifier : undefined,
+        bmsIdentifier: (mode === 'bridge') ? bmsIdentifier : undefined,
         espModel: espModel as any,
         serverUrl 
       });
@@ -154,15 +151,12 @@ export function FirmwareWizard() {
       </CardHeader>
       <CardContent className="space-y-6">
         <Tabs value={mode} onValueChange={(val: any) => setMode(val)} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-secondary/50 h-10">
+          <TabsList className="grid w-full grid-cols-3 bg-secondary/50 h-10">
             <TabsTrigger value="bridge" className="gap-1 text-[9px] sm:text-xs" disabled={espModel === 'esp8266'}>
               <Radio className="h-3 w-3" /> Міст
             </TabsTrigger>
             <TabsTrigger value="hub" className="gap-1 text-[9px] sm:text-xs" disabled={espModel === 'esp8266'}>
               <Share2 className="h-3 w-3" /> Хаб
-            </TabsTrigger>
-            <TabsTrigger value="local_server" className="gap-1 text-[9px] sm:text-xs" disabled={espModel === 'esp8266'}>
-              <Server className="h-3 w-3" /> Соло
             </TabsTrigger>
             <TabsTrigger value="display" className="gap-1 text-[9px] sm:text-xs">
               <Monitor className="h-3 w-3" /> Екран
@@ -173,6 +167,7 @@ export function FirmwareWizard() {
         {mode === 'hub' && (
           <Alert variant="default" className="bg-accent/10 border-accent/20 text-accent">
             <Server className="h-4 w-4" />
+            <AlertTitle>Режим Хаба</AlertTitle>
             <AlertDescription className="text-xs">
               Ця ESP32 стане <b>Центральним Сервером</b>. Вона не підключається до BMS сама, а збирає дані від усіх ваших "Містків" (Bridges) у мережі.
             </AlertDescription>
@@ -239,7 +234,7 @@ export function FirmwareWizard() {
             </div>
           )}
 
-          {(mode === 'bridge' || mode === 'local_server') && (
+          {mode === 'bridge' && (
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Bluetooth className="h-4 w-4" /> Назва BMS
@@ -290,7 +285,7 @@ export function FirmwareWizard() {
         {firmware && (
           <Button variant="outline" onClick={handleDownload} className="w-full border-accent/20 text-accent hover:bg-accent/10">
             <Download className="mr-2 h-4 w-4" />
-            Завантажити .ino файл
+            Завантажити .ino file
           </Button>
         )}
       </CardFooter>

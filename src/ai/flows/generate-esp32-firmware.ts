@@ -1,24 +1,23 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for generating personalized ESP32/ESP8266 firmware (.ino file).
- * Supports four modes: 
+ * Supports three modes: 
  * 1. Bridge: BMS -> ESP32 -> Server (Cloud or Local Hub via BLE & Wi-Fi) - ESP32 only
  * 2. Display: Server -> ESP32/ESP8266 -> OLED/LCD Screen (via Wi-Fi)
- * 3. Local Server: BMS -> ESP32 -> Local Web UI (Single device standalone) - ESP32 only
- * 4. Hub: Multiple Bridges -> ESP32 -> Central Local Dashboard (Central Hub for closed systems)
+ * 3. Hub: Multiple Bridges -> ESP32 -> Central Local Dashboard (Central Hub for closed systems)
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const GenerateEsp32FirmwareInputSchema = z.object({
-  mode: z.enum(['bridge', 'display', 'local_server', 'hub']).default('bridge').describe('Operation mode of the device.'),
+  mode: z.enum(['bridge', 'display', 'hub']).default('bridge').describe('Operation mode of the device.'),
   displayType: z.enum(['none', 'ssd1306', 'sh1106', 'lcd1602', 'custom']).default('none').describe('Type of display connected.'),
   customDisplayDescription: z.string().optional().describe('Description of a non-standard display if "custom" is selected.'),
   ssid: z.string().describe('The Wi-Fi network SSID.'),
   password: z.string().describe('The Wi-Fi network password.'),
   deviceId: z.string().describe('A unique identifier for the device.'),
-  bmsIdentifier: z.string().optional().describe('The Bluetooth name of the JBD BMS (required for bridge and local_server mode).'),
+  bmsIdentifier: z.string().optional().describe('The Bluetooth name of the JBD BMS (required for bridge mode).'),
   espModel: z.enum(['esp32c3', 'esp32s3', 'esp32', 'esp8266']).default('esp32c3').describe('The specific MCU model.'),
   serverUrl: z.string().describe('The API endpoint or local address info.'),
 });
@@ -62,12 +61,6 @@ GOAL: Act as a Remote Dashboard Screen.
 2. Every 5s, perform an HTTP GET request to "{{{serverUrl}}}".
 3. Expect a JSON response with system-wide aggregated telemetry.
 4. Output the data to the display.
-
-{{else if (eq mode "local_server")}}
-GOAL: Act as a Standalone Local Server (Single Device).
-1. Connect to BMS "{{{bmsIdentifier}}}" via BLE.
-2. Host a simple Web UI at "/" for this specific battery.
-3. Serve a "/data" endpoint for AJAX updates.
 
 {{else if (eq mode "hub")}}
 GOAL: Act as a CENTRAL HUB for Multiple Devices in a closed system.
