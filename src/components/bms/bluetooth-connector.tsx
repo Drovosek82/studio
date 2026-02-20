@@ -3,7 +3,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bluetooth as BluetoothIcon, Search, Cpu, Globe, Plus, ShieldAlert, BrainCircuit, Database } from "lucide-react";
+import { 
+  Bluetooth as BluetoothIcon, 
+  Search, 
+  Cpu, 
+  Globe, 
+  Plus, 
+  ShieldAlert, 
+  BrainCircuit, 
+  Database as DatabaseIcon 
+} from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +40,6 @@ export function BluetoothConnector() {
       const insightId = identification.modelName.replace(/\s+/g, '_').toLowerCase();
       const insightRef = doc(db, 'modelInsights', insightId);
       
-      const docSnap = await getDoc(insightRef);
       const insightData = {
         id: insightId,
         modelName: identification.modelName,
@@ -82,7 +90,6 @@ export function BluetoothConnector() {
         identification = await handleIdentifyAndConnect(name);
       }
 
-      // Додаємо пристрій з даними від ШІ
       const id = addDirectBluetoothDevice(name);
       router.push(`/battery/${id}`);
 
@@ -133,7 +140,7 @@ export function BluetoothConnector() {
           <CardContent className="space-y-4">
             <div className="bg-secondary/20 rounded-lg p-3 text-[10px] space-y-1 opacity-70">
               <p className="flex items-center gap-1"><BrainCircuit className="h-3 w-3" /> {t('bleAutoDetect')}</p>
-              <p className="flex items-center gap-1"><Database className="h-3 w-3" /> {t('bleFillKnowledge')}</p>
+              <p className="flex items-center gap-1"><DatabaseIcon className="h-3 w-3" /> {t('bleFillKnowledge')}</p>
             </div>
             <Button 
               size="lg" 
@@ -162,7 +169,7 @@ export function BluetoothConnector() {
             </div>
             <div className="flex gap-2">
               <Input 
-                placeholder="Name..." 
+                placeholder={t('deviceName') + "..."} 
                 value={espName} 
                 onChange={(e) => setEspName(e.target.value)}
                 className="bg-secondary/30 border-none h-10 text-sm"

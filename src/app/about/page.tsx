@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -11,7 +12,6 @@ import {
   BrainCircuit, 
   Layers, 
   ShieldCheck,
-  Zap,
   Globe,
   Database,
   Users,
@@ -78,72 +78,71 @@ export default function AboutPage() {
           </p>
         </section>
 
-        {/* Секція про тарифний план */}
         <section className="p-8 bg-amber-500/10 rounded-2xl border border-amber-500/20 space-y-6">
           <h3 className="text-xl font-bold flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-amber-500" />
-            Чи це безкоштовно? (Про план Blaze)
+            {t('aboutPriceTitle')}
           </h3>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Для роботи ШІ та хостингу Next.js потрібен план <b>Blaze (Pay-as-you-go)</b>. Це вимагає прив'язки картки, але для тестування з друзями ви, швидше за все, <b>нічого не платитимете</b>:
+            {t('aboutPriceDesc')}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex items-center gap-2 p-3 bg-background/50 rounded-lg border border-border/50">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span className="text-xs">2M запитів/міс безкоштовно</span>
+              <span className="text-xs">{t('aboutPriceLimit1')}</span>
             </div>
             <div className="flex items-center gap-2 p-3 bg-background/50 rounded-lg border border-border/50">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span className="text-xs">Великі ліміти для ШІ</span>
+              <span className="text-xs">{t('aboutPriceLimit2')}</span>
             </div>
           </div>
           <p className="text-[10px] text-muted-foreground italic">
-            * Ви платите тільки якщо ваш додаток почне використовувати ресурси понад величезні безкоштовні ліміти.
+            {t('aboutPriceNote')}
           </p>
         </section>
 
         <section className="p-8 bg-blue-500/10 rounded-2xl border border-blue-500/20 space-y-6">
           <h3 className="text-xl font-bold flex items-center gap-2">
             <Share2 className="h-5 w-5 text-blue-500" />
-            Як налаштувати з телефону
+            {t('aboutShareMobileTitle')}
           </h3>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Оскільки ви з телефону, ось покроковий шлях у консолі Firebase:
+            {t('aboutShareMobileDesc')}
           </p>
           <div className="space-y-4">
             <div className="flex gap-4 items-start">
               <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">1</div>
               <div>
-                <p className="font-bold text-sm">Натисніть «Бургер» Меню</p>
-                <p className="text-xs text-muted-foreground">Три лінії <Menu className="inline h-3 w-3" /> у верхньому лівому куті екрана.</p>
+                <p className="font-bold text-sm">{t('aboutStep1Title')}</p>
+                <p className="text-xs text-muted-foreground">{t('aboutStep1Desc')} <Menu className="inline h-3 w-3" />.</p>
               </div>
             </div>
             <div className="flex gap-4 items-start">
               <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">2</div>
               <div>
-                <p className="font-bold text-sm">Build (Розбудова)</p>
-                <p className="text-xs text-muted-foreground">Натисніть на <b>Build</b> — відкриється список сервісів.</p>
+                <p className="font-bold text-sm">{t('aboutStep2Title')}</p>
+                <p className="text-xs text-muted-foreground">{t('aboutStep2Desc')}</p>
               </div>
             </div>
             <div className="flex gap-4 items-start">
               <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">3</div>
               <div>
-                <p className="font-bold text-sm">App Hosting</p>
-                <p className="text-xs text-muted-foreground">Це майже останній пункт у списку Build. Натисніть його.</p>
+                <p className="font-bold text-sm">{t('aboutStep3Title')}</p>
+                <p className="text-xs text-muted-foreground">{t('aboutStep3Desc')}</p>
               </div>
             </div>
             <div className="flex gap-4 items-start">
               <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 font-bold">4</div>
               <div>
-                <p className="font-bold text-sm">Підключіть GitHub</p>
-                <p className="text-xs text-muted-foreground">Натисніть <b>Get started</b> та <b>Connect to GitHub</b> <MousePointer2 className="inline h-3 w-3" />.</p>
+                <p className="font-bold text-sm">{t('aboutStep4Title')}</p>
+                <p className="text-xs text-muted-foreground">{t('aboutStep4Desc')} <MousePointer2 className="inline h-3 w-3" />.</p>
               </div>
             </div>
           </div>
           <div className="pt-4">
             <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700" asChild>
               <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">
-                Відкрити Firebase Console <ExternalLink className="h-3 w-3" />
+                {t('openFirebaseConsole')} <ExternalLink className="h-3 w-3" />
               </a>
             </Button>
           </div>
@@ -173,7 +172,7 @@ export default function AboutPage() {
             {t('intelligence')} & Community
           </h3>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Важливо розуміти: ваші дані про батареї є <b>абсолютно приватними</b>. Але технічні знання про моделі BMS стають частиною <b>глобальної бази знань</b>. Це дозволяє всій спільноті швидше адаптувати нові пристрої.
+            {t('aboutCommunityDesc')}
           </p>
           <div className="flex flex-wrap gap-4 pt-4">
             <div className="flex items-center gap-2 px-4 py-2 bg-background/50 rounded-full border border-border text-xs">
