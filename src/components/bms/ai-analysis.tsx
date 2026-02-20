@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { analyzeBatteryHealth, AnalyzeBatteryHealthOutput } from "@/ai/flows/analyze-battery-health";
 import { BatteryData, HistoricalRecord } from "@/lib/types";
+import { useBmsStore } from "@/lib/bms-store";
 
 interface AiAnalysisProps {
   currentData?: BatteryData;
@@ -13,6 +14,7 @@ interface AiAnalysisProps {
 }
 
 export function AiAnalysis({ currentData, history }: AiAnalysisProps) {
+  const { t } = useBmsStore();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalyzeBatteryHealthOutput | null>(null);
 
@@ -53,7 +55,7 @@ export function AiAnalysis({ currentData, history }: AiAnalysisProps) {
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
           <Brain className="h-5 w-5 text-accent" />
-          <CardTitle className="text-lg">AI Аналіз стану батареї</CardTitle>
+          <CardTitle className="text-lg">{t('aiAnalysis')}</CardTitle>
         </div>
         <Button 
           size="sm" 
@@ -66,7 +68,7 @@ export function AiAnalysis({ currentData, history }: AiAnalysisProps) {
           ) : (
             <>
               <Sparkles className="h-4 w-4 mr-2" />
-              Аналізувати
+              {t('analyze')}
             </>
           )}
         </Button>
@@ -75,7 +77,7 @@ export function AiAnalysis({ currentData, history }: AiAnalysisProps) {
         {!result && !isAnalyzing && (
           <div className="text-center py-8">
             <Info className="h-12 w-12 text-accent/20 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Натисніть кнопку вище, щоб AI проаналізував дані вашої батареї та надав рекомендації.</p>
+            <p className="text-sm text-muted-foreground">{t('aiWaiting')}</p>
           </div>
         )}
 
@@ -90,17 +92,17 @@ export function AiAnalysis({ currentData, history }: AiAnalysisProps) {
         {result && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <div className="p-4 bg-accent/5 border border-accent/10 rounded-lg">
-              <h4 className="font-bold text-accent mb-2">Підсумок:</h4>
+              <h4 className="font-bold text-accent mb-2">{t('aiSummary')}:</h4>
               <p className="text-sm leading-relaxed">{result.overallHealthSummary}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h4 className="text-sm font-bold text-accent uppercase tracking-wider mb-3">Детальний аналіз:</h4>
+                <h4 className="text-sm font-bold text-accent uppercase tracking-wider mb-3">{t('aiDetailedAnalysis')}:</h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">{result.currentInsights}</p>
               </div>
               <div>
-                <h4 className="text-sm font-bold text-accent uppercase tracking-wider mb-3">Історичні тренди:</h4>
+                <h4 className="text-sm font-bold text-accent uppercase tracking-wider mb-3">{t('aiHistoricalTrends')}:</h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">{result.historicalAnalysis}</p>
               </div>
             </div>
@@ -109,7 +111,7 @@ export function AiAnalysis({ currentData, history }: AiAnalysisProps) {
               <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
                 <div className="flex items-center gap-2 mb-2 text-red-500">
                   <AlertCircle className="h-4 w-4" />
-                  <h4 className="text-sm font-bold">Критичні сповіщення:</h4>
+                  <h4 className="text-sm font-bold">{t('aiCriticalAlerts')}:</h4>
                 </div>
                 <ul className="text-xs space-y-1">
                   {result.alerts.map((alert, i) => (
@@ -120,7 +122,7 @@ export function AiAnalysis({ currentData, history }: AiAnalysisProps) {
             )}
 
             <div>
-              <h4 className="text-sm font-bold text-accent uppercase tracking-wider mb-3">Рекомендації:</h4>
+              <h4 className="text-sm font-bold text-accent uppercase tracking-wider mb-3">{t('aiRecommendations')}:</h4>
               <div className="grid grid-cols-1 gap-2">
                 {result.recommendations.map((rec, i) => (
                   <div key={i} className="flex items-start gap-2 p-3 bg-secondary/30 rounded-lg border border-border">

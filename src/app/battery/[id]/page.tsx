@@ -11,11 +11,9 @@ import { RawPacketDebugger } from "@/components/bms/raw-packet-debugger";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ArrowLeft, 
   Settings2, 
-  Info,
   Power,
   Zap,
   Activity,
@@ -25,7 +23,7 @@ import {
 
 export default function BatteryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { allData, history, toggleControl, setBalancingMode, isLoading: isContextLoading } = useBmsStore();
+  const { allData, history, toggleControl, isLoading: isContextLoading, t } = useBmsStore();
   
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -43,7 +41,7 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background text-foreground">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
-        <p className="text-muted-foreground animate-pulse">З'єднання з пристроєм {id}...</p>
+        <p className="text-muted-foreground animate-pulse">{t('connecting')} {id}...</p>
       </div>
     );
   }
@@ -53,13 +51,13 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background text-foreground">
         <ShieldAlert className="h-12 w-12 text-red-500 opacity-50" />
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold">Батарею не знайдено</h2>
+          <h2 className="text-2xl font-bold">{t('waitingData')}</h2>
           <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-            Пристрій <code className="bg-secondary px-1 rounded">{id}</code> не виявлено в системі. 
+            Device <code className="bg-secondary px-1 rounded">{id}</code> was not found. 
           </p>
         </div>
         <Link href="/">
-          <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> На головну</Button>
+          <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> {t('cancel')}</Button>
         </Link>
       </div>
     );
@@ -78,14 +76,14 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
             <div>
               <h1 className="text-xl font-bold tracking-tight">{data.name}</h1>
               <p className="text-[10px] uppercase font-bold text-accent opacity-70 tracking-widest">
-                {id.startsWith('BLE_') ? 'Пряме підключення' : 'Мережевий моніторинг'}
+                {id.startsWith('BLE_') ? t('bleDirectAccess') : t('wifiHub')}
               </p>
             </div>
           </div>
           <Link href={`/battery/${id}/eeprom`}>
             <Button className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
               <Settings2 className="h-4 w-4" />
-              Редагувати EEPROM
+              {t('editEeprom')}
             </Button>
           </Link>
         </div>
@@ -107,14 +105,14 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
              <div className="glass-card p-6 rounded-xl space-y-6">
                 <h3 className="text-lg font-bold flex items-center gap-2">
                   <Power className="h-5 w-5 text-accent" />
-                  Керування MOSFET
+                  {t('mosfetControl')}
                 </h3>
                 
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-medium flex items-center gap-2">
                       <Zap className={`h-4 w-4 ${data.isChargeEnabled ? 'text-green-500' : 'text-muted-foreground'}`} />
-                      Заряд
+                      {t('charge')}
                     </Label>
                     <Switch 
                       checked={data.isChargeEnabled} 
@@ -125,7 +123,7 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-medium flex items-center gap-2">
                       <Power className={`h-4 w-4 ${data.isDischargeEnabled ? 'text-green-500' : 'text-muted-foreground'}`} />
-                      Розряд
+                      {t('discharge')}
                     </Label>
                     <Switch 
                       checked={data.isDischargeEnabled} 
@@ -137,7 +135,7 @@ export default function BatteryPage({ params }: { params: Promise<{ id: string }
                     <div className="flex items-center justify-between">
                       <Label className="text-sm font-medium flex items-center gap-2">
                         <Activity className={`h-4 w-4 ${data.isBalancingActive ? 'text-accent' : 'text-muted-foreground'}`} />
-                        Балансування
+                        {t('balancing')}
                       </Label>
                       <Switch 
                         checked={data.isBalancingActive} 

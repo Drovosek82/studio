@@ -13,12 +13,14 @@ import {
   Area
 } from "recharts";
 import { HistoricalRecord } from "@/lib/types";
+import { useBmsStore } from "@/lib/bms-store";
 
 interface HistoryChartsProps {
   history: HistoricalRecord[];
 }
 
 export function HistoryCharts({ history }: HistoryChartsProps) {
+  const { t } = useBmsStore();
   const formatTime = (iso: string) => {
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -27,7 +29,7 @@ export function HistoryCharts({ history }: HistoryChartsProps) {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
       <Card className="glass-card border-none">
         <CardHeader>
-          <CardTitle className="text-lg font-medium">Графік напруги та струму</CardTitle>
+          <CardTitle className="text-lg font-medium">{t('voltageCurrentChart')}</CardTitle>
         </CardHeader>
         <CardContent className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -53,7 +55,7 @@ export function HistoryCharts({ history }: HistoryChartsProps) {
                 stroke="#5EDEE0" 
                 strokeWidth={2}
                 dot={false}
-                name="Voltage (V)"
+                name={t('voltage') + " (V)"}
               />
               <Line 
                 yAxisId="right"
@@ -62,7 +64,7 @@ export function HistoryCharts({ history }: HistoryChartsProps) {
                 stroke="#2966A3" 
                 strokeWidth={2}
                 dot={false}
-                name="Current (A)"
+                name={t('current') + " (A)"}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -71,7 +73,7 @@ export function HistoryCharts({ history }: HistoryChartsProps) {
 
       <Card className="glass-card border-none">
         <CardHeader>
-          <CardTitle className="text-lg font-medium">Стан заряду (SoC %)</CardTitle>
+          <CardTitle className="text-lg font-medium">{t('socChart')}</CardTitle>
         </CardHeader>
         <CardContent className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">

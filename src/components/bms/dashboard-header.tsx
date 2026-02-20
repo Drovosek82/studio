@@ -5,15 +5,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BatteryData } from "@/lib/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useBmsStore } from "@/lib/bms-store";
 
 interface DashboardHeaderProps {
   data?: BatteryData;
 }
 
 export function DashboardHeader({ data }: DashboardHeaderProps) {
+  const { t } = useBmsStore();
   if (!data) return null;
 
-  // Вираховуємо середню температуру для головного дисплея
   const avgTemp = data.temperatures.length > 0 
     ? data.temperatures.reduce((a, b) => a + b, 0) / data.temperatures.length 
     : 0;
@@ -24,7 +25,7 @@ export function DashboardHeader({ data }: DashboardHeaderProps) {
         <CardContent className="p-6">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-muted-foreground text-sm font-medium">Напруга</p>
+              <p className="text-muted-foreground text-sm font-medium">{t('voltage')}</p>
               <h3 className="text-3xl font-bold mt-1 text-accent">
                 {data.totalVoltage.toFixed(2)} <span className="text-lg font-normal">V</span>
               </h3>
@@ -35,7 +36,7 @@ export function DashboardHeader({ data }: DashboardHeaderProps) {
           </div>
           <div className="mt-4 flex items-center gap-2">
             <Badge variant="outline" className="text-xs border-accent/20 text-accent">
-              Nominal: 48V
+              {t('nominal')}: 48V
             </Badge>
           </div>
         </CardContent>
@@ -45,7 +46,7 @@ export function DashboardHeader({ data }: DashboardHeaderProps) {
         <CardContent className="p-6">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-muted-foreground text-sm font-medium">Струм</p>
+              <p className="text-muted-foreground text-sm font-medium">{t('current')}</p>
               <h3 className="text-3xl font-bold mt-1 text-accent">
                 {data.totalCurrent.toFixed(2)} <span className="text-lg font-normal">A</span>
               </h3>
@@ -55,7 +56,7 @@ export function DashboardHeader({ data }: DashboardHeaderProps) {
             </div>
           </div>
           <div className="mt-4">
-            <p className="text-xs text-muted-foreground">Потужність: {(data.totalVoltage * data.totalCurrent).toFixed(0)} W</p>
+            <p className="text-xs text-muted-foreground">{t('powerWatt')}: {(data.totalVoltage * data.totalCurrent).toFixed(0)} W</p>
           </div>
         </CardContent>
       </Card>
@@ -64,7 +65,7 @@ export function DashboardHeader({ data }: DashboardHeaderProps) {
         <CardContent className="p-6">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-muted-foreground text-sm font-medium">Заряд (SoC)</p>
+              <p className="text-muted-foreground text-sm font-medium">{t('charge')} (SoC)</p>
               <h3 className="text-3xl font-bold mt-1 text-accent">
                 {data.stateOfCharge.toFixed(1)} <span className="text-lg font-normal">%</span>
               </h3>
@@ -86,7 +87,7 @@ export function DashboardHeader({ data }: DashboardHeaderProps) {
         <CardContent className="p-6">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <p className="text-muted-foreground text-sm font-medium">Температура (NTC)</p>
+              <p className="text-muted-foreground text-sm font-medium">{t('temp')} (NTC)</p>
               <div className="flex items-baseline gap-2 mt-1">
                 <h3 className="text-3xl font-bold text-accent">
                   {avgTemp.toFixed(1)} <span className="text-lg font-normal">°C</span>
@@ -102,21 +103,21 @@ export function DashboardHeader({ data }: DashboardHeaderProps) {
           <div className="mt-4 space-y-2">
             <div className="flex flex-wrap gap-2">
               <TooltipProvider>
-                {data.temperatures.map((t, i) => (
+                {data.temperatures.map((t_val, i) => (
                   <Tooltip key={i}>
                     <TooltipTrigger asChild>
                       <div className="flex flex-col items-center">
                         <div className="h-3 w-1.5 bg-secondary rounded-full overflow-hidden mb-1">
                           <div 
-                            className={`w-full ${t > 45 ? 'bg-red-500' : 'bg-accent'}`} 
-                            style={{ height: `${(t / 80) * 100}%`, marginTop: 'auto' }} 
+                            className={`w-full ${t_val > 45 ? 'bg-red-500' : 'bg-accent'}`} 
+                            style={{ height: `${(t_val / 80) * 100}%`, marginTop: 'auto' }} 
                           />
                         </div>
                         <span className="text-[8px] font-bold opacity-50">T{i+1}</span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent className="bg-popover border-border">
-                      <p className="text-xs">Сенсор {i + 1}: <span className="text-accent font-bold">{t.toFixed(1)}°C</span></p>
+                      <p className="text-xs">Sensor {i + 1}: <span className="text-accent font-bold">{t_val.toFixed(1)}°C</span></p>
                     </TooltipContent>
                   </Tooltip>
                 ))}
@@ -124,7 +125,7 @@ export function DashboardHeader({ data }: DashboardHeaderProps) {
             </div>
             <div className="flex items-center gap-1">
                <ShieldCheck className="h-3 w-3 text-green-500" />
-               <p className="text-[10px] text-green-500 font-medium truncate">{data.protectionStatus}</p>
+               <p className="text-[10px] text-green-500 font-medium truncate">{data.protectionStatus === 'Normal' ? t('online') : data.protectionStatus}</p>
             </div>
           </div>
         </CardContent>

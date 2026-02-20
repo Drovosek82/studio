@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Zap } from "lucide-react";
+import { useBmsStore } from "@/lib/bms-store";
 
 interface CellGridProps {
   voltages: number[];
@@ -10,6 +11,7 @@ interface CellGridProps {
 }
 
 export function CellGrid({ voltages, balancingCells = [] }: CellGridProps) {
+  const { t } = useBmsStore();
   const min = Math.min(...voltages);
   const max = Math.max(...voltages);
   const diff = max - min;
@@ -17,11 +19,11 @@ export function CellGrid({ voltages, balancingCells = [] }: CellGridProps) {
   return (
     <Card className="glass-card border-none">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg font-medium">Напруга комірок (Cells)</CardTitle>
+        <CardTitle className="text-lg font-medium">{t('cellVoltages')}</CardTitle>
         <div className="flex gap-2">
           {balancingCells.some(b => b) && (
             <Badge variant="outline" className="border-accent text-accent animate-pulse">
-              <Zap className="h-3 w-3 mr-1" /> Балансування активне
+              <Zap className="h-3 w-3 mr-1" /> {t('balancingActive')}
             </Badge>
           )}
           <Badge variant="outline" className="border-accent/20 text-accent font-code">
