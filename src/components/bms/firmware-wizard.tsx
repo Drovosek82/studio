@@ -32,9 +32,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { generateEsp32Firmware } from "@/ai/flows/generate-esp32-firmware";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase";
+import { useBmsStore } from "@/lib/bms-store";
 
 export function FirmwareWizard() {
   const { user } = useUser();
+  const { localHubIp: globalLocalHubIp } = useBmsStore();
+  
   const [mode, setMode] = useState<'bridge' | 'display' | 'hub'>('bridge');
   const [displayType, setDisplayType] = useState<string>("none");
   const [customDisplayDescription, setCustomDisplayDescription] = useState("");
@@ -51,6 +54,14 @@ export function FirmwareWizard() {
   const [localHubIp, setLocalHubIp] = useState("");
 
   const { toast } = useToast();
+
+  // Автоматично підставляємо IP Хаба, якщо він відомий системі
+  useEffect(() => {
+    if (globalLocalHubIp && !localHubIp) {
+      setLocalHubIp(globalLocalHubIp);
+      setUseLocalHub(true);
+    }
+  }, [globalLocalHubIp]);
 
   useEffect(() => {
     const randomId = Math.random().toString(36).substr(2, 4).toUpperCase();
