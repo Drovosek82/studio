@@ -2,6 +2,7 @@
 /**
  * @fileOverview A Genkit flow for generating personalized ESP32 firmware (.ino file) 
  * configured to connect to JBD BMS via Bluetooth (BLE) and report to the cloud.
+ * Now includes support for different ESP32 models to handle radio coexistence.
  */
 
 import { ai } from '@/ai/genkit';
@@ -11,7 +12,8 @@ const GenerateEsp32FirmwareInputSchema = z.object({
   ssid: z.string().describe('The Wi-Fi network SSID.'),
   password: z.string().describe('The Wi-Fi network password.'),
   deviceId: z.string().describe('A unique identifier for the ESP32 device.'),
-  bmsIdentifier: z.string().describe('The Bluetooth name or MAC address of the JBD BMS (e.g., "JBD-SP15S001").'),
+  bmsIdentifier: z.string().describe('The Bluetooth name or MAC address of the JBD BMS.'),
+  espModel: z.enum(['esp32c3', 'esp32s3', 'esp32']).default('esp32c3').describe('The specific ESP32 model to optimize radio usage.'),
   serverUrl: z.string().optional().default('https://your-app.com/api/bms/update').describe('The API endpoint to send data to.'),
 });
 export type GenerateEsp32FirmwareInput = z.infer<typeof GenerateEsp32FirmwareInputSchema>;
@@ -29,33 +31,23 @@ const generateFirmwarePrompt = ai.definePrompt({
   name: 'generateEsp32FirmwarePrompt',
   input: { schema: GenerateEsp32FirmwareInputSchema },
   output: { schema: GenerateEsp32FirmwareOutputSchema },
-  prompt: `You are an expert at generating ESP32-C3 firmware for a "BMS Cloud Bridge".
-The device must connect to a JBD BMS via Bluetooth Low Energy (BLE) and relay data to a web server via Wi-Fi.
+  prompt: `You are an expert at generating firmware for a "BMS Cloud Bridge" using {{{espModel}}}.
 
-Generate a complete Arduino .ino file with these features:
+IMPORTANT RADIO COEXISTENCE RULES:
+The target hardware is {{{espModel}}}. 
+- If espModel is "esp32c3", it has a single antenna/radio. You MUST implement a "time-sharing" approach: scan/read BLE, then disconnect or pause BLE activity before sending Wi-Fi data to prevent radio crashes. Use stable intervals.
+- If espModel is "esp32s3" or "esp32", handle dual-core capabilities to run BLE and Wi-Fi on different cores if possible.
+
+Generate a complete Arduino .ino file:
 1. **Wi-Fi**: Connect to SSID "{{{ssid}}}" with password "{{{password}}}".
 2. **BMS BLE Connection**:
-   - Scan for and connect to a BLE device named or with MAC "{{{bmsIdentifier}}}".
+   - Scan for and connect to "{{{bmsIdentifier}}}".
    - Use Service UUID "FF00" and Characteristic UUIDs "FF01" (Notify/Read) and "FF02" (Write).
-   - Implement the JBD Master protocol: Send command 0xDD 0xA5 0x03 0x00 0xFF 0xFD 0x77 to request basic info.
+   - Protocol: Send 0xDD 0xA5 0x03 0x00 0xFF 0xFD 0x77.
 3. **Data Reporting**:
-   - Every 5-10 seconds, parse the BMS response.
-   - Send an HTTP POST request to "{{{serverUrl}}}".
-   - JSON Payload:
-     {
-       "deviceId": "{{{deviceId}}}",
-       "name": "ESP32 Bridge ({{{bmsIdentifier}}})",
-       "totalVoltage": 52.4,
-       "totalCurrent": 2.5,
-       "stateOfCharge": 85,
-       "temperatures": [25.5, 26.0],
-       "cellVoltages": [3.74, 3.75, ...],
-       "protectionStatus": "Normal"
-     }
-4. **Auto-Reconnect**: 
-   - If Wi-Fi is lost, reconnect.
-   - If BLE connection drops, start scanning again.
-5. **Debug**: Print status to Serial (USB) at 115200 baud.
+   - Every 10 seconds, send an HTTP POST to "{{{serverUrl}}}".
+   - JSON Payload includes deviceId: "{{{deviceId}}}", voltage, current, soc, temperatures, cellVoltages, and protectionStatus.
+4. **Resilience**: Auto-reconnect Wi-Fi and BLE.
 
 Output ONLY the raw .ino file content in the "firmwareContent" field.`,
 });
