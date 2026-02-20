@@ -19,7 +19,8 @@ import {
   Menu,
   MousePointer2,
   CreditCard,
-  CheckCircle2
+  CheckCircle2,
+  Github
 } from "lucide-react";
 
 export default function AboutPage() {
@@ -75,6 +76,24 @@ export default function AboutPage() {
           <p className="text-xl text-muted-foreground leading-relaxed">
             {t('aboutDesc')}
           </p>
+        </section>
+
+        {/* Спеціальний розділ для завантаження на GitHub з телефону */}
+        <section className="p-8 bg-purple-500/10 rounded-2xl border border-purple-500/20 space-y-6">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <Github className="h-5 w-5 text-purple-500" />
+            Як завантажити код на GitHub (з телефону)
+          </h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Ви бачите це повідомлення, тому що ваш проект ще не на GitHub. Щоб отримати постійне посилання:
+          </p>
+          <div className="bg-background/50 p-4 rounded-lg border border-border/50 space-y-3">
+            <p className="text-xs font-bold text-accent">КРОК 1: Знайдіть кнопку GitHub</p>
+            <p className="text-xs">У цьому редакторі (Firebase Studio) подивіться на саму верхню синю або сіру панель інструментів. Там є кнопка з іконкою GitHub.</p>
+            
+            <p className="text-xs font-bold text-accent">КРОК 2: Підключіть репозиторій</p>
+            <p className="text-xs">Натисніть на неї та виберіть свій порожній репозиторій. Всі файли (50+) завантажаться автоматично за кілька секунд.</p>
+          </div>
         </section>
 
         <section className="p-8 bg-amber-500/10 rounded-2xl border border-amber-500/20 space-y-6">
