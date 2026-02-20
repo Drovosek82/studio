@@ -14,7 +14,8 @@ import {
   AlertTriangle, 
   Server, 
   Share2,
-  Search
+  Search,
+  Bluetooth
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,13 +51,11 @@ export function FirmwareWizard() {
 
   const { toast } = useToast();
 
-  // Синхронізація з глобальним IP Хаба
   useEffect(() => {
     if (globalLocalHubIp && (mode === 'bridge' || mode === 'display')) {
       setLocalHubIp(globalLocalHubIp);
       setUseLocalHub(true);
     } else if (mode === 'hub') {
-      // Для самого Хаба IP не потрібен (він сам і є сервер)
       setUseLocalHub(false);
       setLocalHubIp("");
     }
