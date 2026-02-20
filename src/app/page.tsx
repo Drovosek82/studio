@@ -1,14 +1,17 @@
 
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useBmsStore } from "@/lib/bms-store";
 import { BluetoothConnector } from "@/components/bms/bluetooth-connector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { 
   Activity, 
   Settings, 
@@ -18,12 +21,13 @@ import {
   Battery,
   ChevronRight,
   MonitorPlay,
-  Cpu
+  Cpu,
+  Server
 } from "lucide-react";
 import { FirmwareWizard } from "@/components/bms/firmware-wizard";
 
 export default function Home() {
-  const { aggregated, devices, allData, isDemoMode, setDemoMode } = useBmsStore();
+  const { aggregated, devices, allData, isDemoMode, setDemoMode, localHubIp, setLocalHubIp } = useBmsStore();
 
   return (
     <main className="min-h-screen bg-background text-foreground pb-12">
@@ -39,6 +43,12 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            {localHubIp && (
+              <Badge variant="outline" className="border-green-500/20 text-green-500 gap-1">
+                <Server className="h-3 w-3" />
+                Local Hub: {localHubIp}
+              </Badge>
+            )}
             {isDemoMode && (
               <Badge variant="outline" className="border-accent/20 text-accent gap-1 animate-pulse">
                 <CircleDot className="h-3 w-3" />
@@ -46,7 +56,7 @@ export default function Home() {
               </Badge>
             )}
             <div className="text-xs text-muted-foreground hidden sm:block">
-              v1.5.0 | Multi-Source
+              v1.6.0 | Local-First
             </div>
           </div>
         </div>
@@ -144,7 +154,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Direct Connections Section */}
             {devices.some(d => d.type === 'Bluetooth') && (
               <div className="mt-12 space-y-4">
                 <h2 className="text-xl font-bold flex items-center gap-2">
@@ -183,6 +192,37 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6 max-w-4xl mx-auto">
+            <Card className="glass-card border-none">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Server className="h-5 w-5 text-accent" />
+                  <CardTitle>Локальна мережа</CardTitle>
+                </div>
+                <CardDescription>Налаштуйте з'єднання з вашим Центральним Хабом (ESP32 Server)</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>IP адреса Центрального Хаба</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      placeholder="Напр. 192.168.1.50" 
+                      value={localHubIp} 
+                      onChange={(e) => setLocalHubIp(e.target.value)}
+                      className="bg-secondary/30 border-none h-10"
+                    />
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setLocalHubIp('')}
+                      className="border-accent/20 text-accent"
+                    >
+                      Скинути
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Якщо IP вказано, програма отримуватиме дані з Хаба замість хмари. Це дозволяє працювати без інтернету.</p>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card className="glass-card border-none">
               <CardHeader>
                 <div className="flex items-center gap-2">

@@ -22,6 +22,8 @@ interface BmsContextType {
   aggregated: any;
   isDemoMode: boolean;
   isLoading: boolean;
+  localHubIp: string;
+  setLocalHubIp: (ip: string) => void;
   setDemoMode: (val: boolean) => void;
   toggleControl: (deviceId: string, field: string) => void;
   updateEeprom: (deviceId: string, key: string, value: any) => void;
@@ -85,6 +87,7 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
   const auth = useAuth();
   const db = useFirestore();
   const [isDemoMode, setIsDemoModeState] = useState(false);
+  const [localHubIp, setLocalHubIp] = useState('');
   
   const [demoDevices, setDemoDevices] = useState<BatteryDevice[]>([]);
   const [demoData, setDemoData] = useState<Record<string, BatteryData>>({});
@@ -92,6 +95,9 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
   
   const [directDevices, setDirectDevices] = useState<BatteryDevice[]>([]);
   const [directData, setDirectData] = useState<Record<string, BatteryData>>({});
+  
+  const [hubDevices, setHubDevices] = useState<BatteryDevice[]>([]);
+  const [hubData, setHubData] = useState<Record<string, BatteryData>>({});
   
   const [pendingDevices, setPendingDevices] = useState<Record<string, BatteryData>>({});
 
@@ -101,41 +107,81 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, isUserLoading, auth]);
 
+  // Отримання даних з Firebase
   const devicesRef = useMemoFirebase(() => 
     user && db ? collection(db, 'users', user.uid, 'bmsDevices') : null, 
   [user, db]);
   const { data: fbDevices, isLoading: isFbLoading } = useCollection<any>(devicesRef);
 
-  // --- 1. СПОЧАТКУ ОБЧИСЛЮЄМО ДАНІ ---
+  // Опитування локального Хаба
+  useEffect(() => {
+    if (!localHubIp) return;
+
+    const pollHub = async () => {
+      try {
+        const response = await fetch(`http://${localHubIp}/api/data`);
+        if (!response.ok) throw new Error('Hub not reachable');
+        const data = await response.json();
+        
+        if (data && typeof data === 'object') {
+          const newHubData: Record<string, BatteryData> = {};
+          const newHubDevices: BatteryDevice[] = [];
+
+          Object.entries(data).forEach(([id, device]: [string, any]) => {
+            newHubData[id] = { ...createMockBatteryData(id, device.name || id, true), ...device };
+            newHubDevices.push({
+              id,
+              name: device.name || id,
+              type: 'ESP32',
+              status: 'Online'
+            });
+          });
+
+          setHubData(newHubData);
+          setHubDevices(newHubDevices);
+        }
+      } catch (e) {
+        console.warn('Local Hub Error:', e);
+      }
+    };
+
+    const interval = setInterval(pollHub, 2000);
+    return () => clearInterval(interval);
+  }, [localHubIp]);
+
+  // Спершу обчислюємо дані
   const allData = useMemo(() => {
     const combined: Record<string, BatteryData> = isDemoMode 
       ? { ...demoData } 
-      : { ...directData, ...pendingDevices };
+      : { ...directData, ...hubData, ...pendingDevices };
     
     if (!isDemoMode && fbDevices) {
       fbDevices.forEach(d => {
-        combined[d.id] = { ...combined[d.id], ...d };
+        if (!combined[d.id]) combined[d.id] = d;
       });
     }
     return combined;
-  }, [isDemoMode, demoData, directData, pendingDevices, fbDevices]);
+  }, [isDemoMode, demoData, directData, hubData, pendingDevices, fbDevices]);
 
   const devices = useMemo(() => {
     if (isDemoMode) return demoDevices;
+    
     const fromFb = (fbDevices || []).map(d => ({ 
       id: d.id, 
       name: d.name, 
       type: (d.type || 'ESP32') as any, 
       status: (d.status || 'Offline') as any 
     }));
+    
     const fromPending = Object.values(pendingDevices).map(d => ({
       id: d.id,
       name: d.name,
       type: 'ESP32' as const,
       status: 'Connecting' as const
     }));
-    return [...fromFb, ...fromPending, ...directDevices];
-  }, [isDemoMode, demoDevices, fbDevices, pendingDevices, directDevices]);
+
+    return [...fromFb, ...fromPending, ...directDevices, ...hubDevices];
+  }, [isDemoMode, demoDevices, fbDevices, pendingDevices, directDevices, hubDevices]);
 
   const aggregated = useMemo(() => {
     const networkData = devices.filter(d => d.type === 'ESP32').map(d => allData[d.id]).filter(Boolean);
@@ -150,11 +196,18 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [devices, allData]);
 
-  // --- 2. ТЕПЕР ОГОЛОШУЄМО ФУНКЦІЇ, ЩО ЗАЛЕЖАТЬ ВІД allData ---
+  // А потім функції, які від них залежать
   const toggleControl = useCallback((deviceId: string, field: string) => {
-    const isSpecialId = deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_');
+    const isSpecialId = deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_') || hubData[deviceId];
     if (isDemoMode || isSpecialId) {
-      const setter = (isSpecialId && !isDemoMode) ? setDirectData : setDemoData;
+      if (localHubIp && hubData[deviceId]) {
+        fetch(`http://${localHubIp}/api/control`, {
+          method: 'POST',
+          body: JSON.stringify({ deviceId, field, value: !allData[deviceId]?.[field as keyof BatteryData] })
+        }).catch(e => console.error('Hub Control Error:', e));
+      }
+
+      const setter = (deviceId.startsWith('BLE_')) ? setDirectData : setDemoData;
       setter(prev => {
         if (!prev[deviceId]) return prev;
         const currentData = prev[deviceId];
@@ -168,12 +221,19 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
       const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', deviceId);
       updateDocumentNonBlocking(deviceRef, { [field]: !currentVal }); 
     }
-  }, [isDemoMode, user, db, allData]);
+  }, [isDemoMode, user, db, allData, localHubIp, hubData]);
 
   const updateEeprom = useCallback((deviceId: string, key: string, value: any) => {
-    const isSpecialId = deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_');
+    const isSpecialId = deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_') || hubData[deviceId];
     if (isDemoMode || isSpecialId) {
-      const setter = (isSpecialId && !isDemoMode) ? setDirectData : setDemoData;
+      if (localHubIp && hubData[deviceId]) {
+        fetch(`http://${localHubIp}/api/eeprom`, {
+          method: 'POST',
+          body: JSON.stringify({ deviceId, key, value })
+        }).catch(e => console.error('Hub EEPROM Error:', e));
+      }
+
+      const setter = (deviceId.startsWith('BLE_')) ? setDirectData : setDemoData;
       setter(prev => {
         if (!prev[deviceId]) return prev;
         return {
@@ -188,12 +248,12 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
       const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', deviceId);
       updateDocumentNonBlocking(deviceRef, { [`eeprom.${key}`]: value });
     }
-  }, [isDemoMode, user, db]);
+  }, [isDemoMode, user, db, allData, localHubIp, hubData]);
 
   const setBalancingMode = useCallback((deviceId: string, mode: 'charge' | 'always' | 'static') => {
-    const isSpecialId = deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_');
+    const isSpecialId = deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_') || hubData[deviceId];
     if (isDemoMode || isSpecialId) {
-      const setter = (isSpecialId && !isDemoMode) ? setDirectData : setDemoData;
+      const setter = (deviceId.startsWith('BLE_')) ? setDirectData : setDemoData;
       setter(prev => {
         if (!prev[deviceId]) return prev;
         return {
@@ -205,7 +265,7 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
       const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', deviceId);
       updateDocumentNonBlocking(deviceRef, { balancingMode: mode });
     }
-  }, [isDemoMode, user, db]);
+  }, [isDemoMode, user, db, hubData]);
 
   const addDirectBluetoothDevice = useCallback((name: string) => {
     const id = `BLE_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
@@ -263,17 +323,14 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isDemoMode, demoDevices.length]);
 
-  // Ефект симуляції опитування BMS (Master-Slave Polling)
   useEffect(() => {
     const interval = setInterval(() => {
-      // 1. Симуляція Master-запитів для Демо-режиму
       if (isDemoMode) {
         setDemoData(prev => {
           const newData = { ...prev };
           Object.keys(newData).forEach(id => {
             const item = newData[id];
             if (!item) return;
-            // Кожна ітерація - це успішна відповідь Slave на запит Master (0x03)
             newData[id] = {
               ...item,
               totalCurrent: item.isDischargeEnabled ? Math.max(-50, Math.min(100, item.totalCurrent + (Math.random() - 0.5) * 0.5)) : 0,
@@ -286,8 +343,6 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
-      // 2. Симуляція Master-запитів через Web Bluetooth (BLE)
-      // В реальності браузер надсилає writeValue(0xDD, 0xA5, 0x03, ...) і чекає на відповідь
       setDirectData(prev => {
         const newData = { ...prev };
         Object.keys(newData).forEach(id => {
@@ -302,7 +357,7 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
         });
         return newData;
       });
-    }, 3000); // Опитування кожні 3 секунди
+    }, 3000); 
     return () => clearInterval(interval);
   }, [isDemoMode]);
 
@@ -313,6 +368,8 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     aggregated,
     isDemoMode,
     isLoading: isUserLoading || (!isDemoMode && isFbLoading),
+    localHubIp,
+    setLocalHubIp,
     setDemoMode: setIsDemoModeState,
     toggleControl,
     updateEeprom,
