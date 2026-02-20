@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -139,6 +140,7 @@ export function useBmsStore() {
     setActiveDeviceId,
     currentData: realTimeData[activeDeviceId],
     allData: realTimeData,
+    history,
     activeHistory: history[activeDeviceId] || [],
     aggregated: getAggregatedData(),
     isDemoMode,
