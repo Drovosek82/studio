@@ -14,33 +14,34 @@ import { toast } from "@/hooks/use-toast";
 
 export function BluetoothConnector() {
   const router = useRouter();
-  const { addDirectBluetoothDevice, addNetworkDevice, devices, isDemoMode } = useBmsStore();
+  const { addDirectBluetoothDevice, devices, isDemoMode } = useBmsStore();
   const [isScanning, setIsScanning] = useState(false);
   const [espName, setEspName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const { addNetworkDevice } = useBmsStore();
 
   const handleDirectBluetooth = async () => {
     setIsScanning(true);
     setError(null);
     try {
       if (isDemoMode) {
+        // У демо-режимі завжди знаходимо демо-модель
         await new Promise(r => setTimeout(r, 1500));
-        const bmsName = "Demo-BMS-Scanner";
+        const bmsName = "Demo-JBD-BMS-Scanner";
         const id = addDirectBluetoothDevice(bmsName);
         toast({
-          title: "Симуляція підключення",
-          description: `Ви обрали демо-пристрій: ${bmsName}.`,
+          title: "Демо-пристрій знайдено",
+          description: `Ви підключилися до симулятора: ${bmsName}.`,
         });
         router.push(`/battery/${id}`);
         return;
       }
 
-      // Реальна логіка Web Bluetooth без фільтрів за іменами
-      if (!navigator.bluetooth) {
+      // Реальна логіка Web Bluetooth
+      if (typeof window !== 'undefined' && !navigator.bluetooth) {
         throw new Error("Ваш браузер не підтримує Web Bluetooth. Використовуйте Chrome або Edge через HTTPS.");
       }
 
-      // Вимикаємо фільтри, дозволяємо всі пристрої для вибору
       const device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: [
@@ -50,11 +51,11 @@ export function BluetoothConnector() {
         ]
       });
 
-      const id = addDirectBluetoothDevice(device.name || "Невідома BMS");
+      const id = addDirectBluetoothDevice(device.name || "Real BMS Device");
       
       toast({
-        title: "Пристрій обрано",
-        description: `З'єднання з ${device.name || 'BMS'} встановлено успішно.`,
+        title: "Пристрій підключено",
+        description: `З'єднання з ${device.name || 'BMS'} встановлено.`,
       });
       
       router.push(`/battery/${id}`);
@@ -65,7 +66,7 @@ export function BluetoothConnector() {
         setError(err.message || "Помилка підключення до Bluetooth");
       }
       toast({
-        title: "Помилка підключення",
+        title: "Помилка",
         description: err.message,
         variant: "destructive"
       });
@@ -90,10 +91,10 @@ export function BluetoothConnector() {
     setEspName("");
     
     toast({
-      title: "Вузол додано",
+      title: "Пристрій додано",
       description: isDemoMode 
         ? `${espName} підключено до симуляції.` 
-        : `${espName} додано у стані очікування (Offline).`,
+        : `${espName} додано у стані очікування (Offline). Увімкніть демо-режим для симуляції даних.`,
     });
   };
 
@@ -108,14 +109,13 @@ export function BluetoothConnector() {
       )}
 
       <div className="text-center space-y-2 mb-8">
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">Оберіть спосіб підключення</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">Спосіб підключення</h2>
         <p className="text-muted-foreground text-sm max-w-md mx-auto">
-          Використовуйте прямий доступ для сервісного налаштування або мережу ESP32 для постійного моніторингу.
+          Оберіть прямий доступ для налаштування або мережу ESP32 для постійного моніторингу.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Direct Bluetooth Card */}
         <Card className="glass-card border-none flex flex-col hover:ring-1 hover:ring-accent/50 transition-all duration-300">
           <CardHeader>
             <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 mb-2">
@@ -123,7 +123,7 @@ export function BluetoothConnector() {
             </div>
             <CardTitle>Прямий BLE доступ</CardTitle>
             <CardDescription>
-              Миттєве підключення до однієї BMS через браузер.
+              Миттєве підключення до BMS через браузер. {isDemoMode && "(Демо-режим активний)"}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col justify-end gap-4">
@@ -151,14 +151,13 @@ export function BluetoothConnector() {
               ) : (
                 <>
                   <Bluetooth className="h-4 w-4 mr-2" />
-                  Знайти пристрій
+                  {isDemoMode ? "Знайти демо-BMS" : "Знайти реальну BMS"}
                 </>
               )}
             </Button>
           </CardContent>
         </Card>
 
-        {/* ESP32 Network Card */}
         <Card className="glass-card border-none flex flex-col hover:ring-1 hover:ring-accent/50 transition-all duration-300">
           <CardHeader>
             <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent mb-2">

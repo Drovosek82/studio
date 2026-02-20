@@ -14,8 +14,8 @@ import { collection, doc, serverTimestamp } from 'firebase/firestore';
 
 // Початкові демо-дані
 const DEMO_DEVICES: BatteryDevice[] = [
-  { id: 'BMS_01', name: 'Battery Pack A', type: 'ESP32', status: 'Online' },
-  { id: 'BMS_02', name: 'Battery Pack B', type: 'ESP32', status: 'Online' }
+  { id: 'DEMO_01', name: 'Battery Pack A (Demo)', type: 'ESP32', status: 'Online' },
+  { id: 'DEMO_02', name: 'Battery Pack B (Demo)', type: 'ESP32', status: 'Online' }
 ];
 
 const createMockBatteryData = (id: string, name: string): BatteryData => ({
@@ -64,33 +64,43 @@ const createMockHistory = (id: string): HistoricalRecord[] =>
 export function useBmsStore() {
   const { user } = useUser();
   const db = useFirestore();
-  const [isDemoMode, setIsDemoModeState] = useState(true);
+  const [isDemoMode, setIsDemoModeState] = useState(false); // Тепер за замовчуванням FALSE
   
-  // Локальний стейт
-  const [demoDevices, setDemoDevices] = useState<BatteryDevice[]>(DEMO_DEVICES);
+  // Локальний стейт для прямих підключень (BLE) та демо-даних
+  const [demoDevices, setDemoDevices] = useState<BatteryDevice[]>([]);
   const [demoData, setDemoData] = useState<Record<string, BatteryData>>({});
   const [demoHistory, setDemoHistory] = useState<Record<string, HistoricalRecord[]>>({});
+  
+  // Окремий стейт для реальних прямих підключень
+  const [directDevices, setDirectDevices] = useState<BatteryDevice[]>([]);
+  const [directData, setDirectData] = useState<Record<string, BatteryData>>({});
 
-  // Firebase стейт
+  // Firebase стейт для ESP32 пристроїв
   const devicesRef = useMemoFirebase(() => 
     user && db ? collection(db, 'users', user.uid, 'bmsDevices') : null, 
   [user, db]);
   const { data: fbDevices } = useCollection<any>(devicesRef);
 
+  // Ініціалізація демо-даних при ввімкненні режиму
   useEffect(() => {
-    if (isDemoMode && Object.keys(demoData).length === 0) {
+    if (isDemoMode && demoDevices.length === 0) {
       const initialData: Record<string, BatteryData> = {};
       const initialHistory: Record<string, HistoricalRecord[]> = {};
       DEMO_DEVICES.forEach(dev => {
         initialData[dev.id] = createMockBatteryData(dev.id, dev.name);
         initialHistory[dev.id] = createMockHistory(dev.id);
       });
+      setDemoDevices(DEMO_DEVICES);
       setDemoData(initialData);
       setDemoHistory(initialHistory);
+    } else if (!isDemoMode) {
+      setDemoDevices([]);
+      setDemoData({});
+      setDemoHistory({});
     }
   }, [isDemoMode]);
 
-  // Симуляція демо-даних
+  // Симуляція демо-даних (таймер)
   useEffect(() => {
     if (!isDemoMode) return;
     const interval = setInterval(() => {
@@ -115,29 +125,27 @@ export function useBmsStore() {
 
   const setDemoMode = (val: boolean) => {
     setIsDemoModeState(val);
-    if (!val) {
-      setDemoDevices([]);
-      setDemoData({});
-      setDemoHistory({});
-    } else {
-      setDemoDevices(DEMO_DEVICES);
-    }
   };
 
   const addDirectBluetoothDevice = useCallback((name: string) => {
     const id = `BLE_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
     const newDevice: BatteryDevice = { id, name, type: 'Bluetooth', status: 'Online' };
     
-    setDemoDevices(prev => [...prev, newDevice]);
-    setDemoData(prev => ({ ...prev, [id]: createMockBatteryData(id, name) }));
-    setDemoHistory(prev => ({ ...prev, [id]: createMockHistory(id) }));
+    if (isDemoMode) {
+      setDemoDevices(prev => [...prev, newDevice]);
+      setDemoData(prev => ({ ...prev, [id]: createMockBatteryData(id, name) }));
+      setDemoHistory(prev => ({ ...prev, [id]: createMockHistory(id) }));
+    } else {
+      setDirectDevices(prev => [...prev, newDevice]);
+      setDirectData(prev => ({ ...prev, [id]: createMockBatteryData(id, name) }));
+    }
     
     return id;
-  }, []);
+  }, [isDemoMode]);
 
   const addNetworkDevice = useCallback((name: string) => {
     if (isDemoMode) {
-      const id = `ESP32_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+      const id = `DEMO_ESP_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
       const newDevice: BatteryDevice = { id, name, type: 'ESP32', status: 'Online' };
       setDemoDevices(prev => [...prev, newDevice]);
       setDemoData(prev => ({ ...prev, [id]: createMockBatteryData(id, name) }));
@@ -158,20 +166,23 @@ export function useBmsStore() {
   }, [isDemoMode, user, db]);
 
   const toggleControl = useCallback((deviceId: string, field: string) => {
-    if (isDemoMode || deviceId.startsWith('BLE_')) {
-      setDemoData(prev => ({
+    if (isDemoMode || deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_')) {
+      const setter = isDemoMode ? setDemoData : setDirectData;
+      setter(prev => ({
         ...prev,
         [deviceId]: { ...prev[deviceId], [field]: !prev[deviceId][field as keyof BatteryData] }
       }));
     } else if (user && db) {
       const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', deviceId);
+      // У реальному режимі зазвичай ми знаємо поточне значення або відправляємо команду
       updateDocumentNonBlocking(deviceRef, { [field]: true }); 
     }
   }, [isDemoMode, user, db]);
 
   const updateEeprom = useCallback((deviceId: string, key: string, value: any) => {
-    if (isDemoMode || deviceId.startsWith('BLE_')) {
-      setDemoData(prev => ({
+    if (isDemoMode || deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_')) {
+      const setter = isDemoMode ? setDemoData : setDirectData;
+      setter(prev => ({
         ...prev,
         [deviceId]: {
           ...prev[deviceId],
@@ -185,8 +196,9 @@ export function useBmsStore() {
   }, [isDemoMode, user, db]);
 
   const setBalancingMode = useCallback((deviceId: string, mode: 'charge' | 'always' | 'static') => {
-    if (isDemoMode || deviceId.startsWith('BLE_')) {
-      setDemoData(prev => ({
+    if (isDemoMode || deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_')) {
+      const setter = isDemoMode ? setDemoData : setDirectData;
+      setter(prev => ({
         ...prev,
         [deviceId]: { ...prev[deviceId], balancingMode: mode }
       }));
@@ -200,25 +212,33 @@ export function useBmsStore() {
     const activeDevices = isDemoMode ? demoDevices : (fbDevices || []);
     const activeData = isDemoMode ? demoData : {}; 
     
-    const networkData = activeDevices
-      .filter((d: any) => d.type === 'ESP32')
-      .map((d: any) => activeData[d.id])
-      .filter(Boolean);
+    // В реальному режимі дані пристрою вже в fbDevices
+    const networkData = isDemoMode 
+      ? demoDevices.filter(d => d.type === 'ESP32').map(d => demoData[d.id]).filter(Boolean)
+      : (fbDevices || []).filter(d => d.type === 'ESP32' && d.status === 'Online');
 
     if (networkData.length === 0) return null;
     
     return {
-      totalVoltage: networkData.reduce((acc, curr) => acc + curr.totalVoltage, 0) / networkData.length,
-      totalCurrent: networkData.reduce((acc, curr) => acc + curr.totalCurrent, 0),
-      avgSoC: networkData.reduce((acc, curr) => acc + curr.stateOfCharge, 0) / networkData.length,
+      totalVoltage: networkData.reduce((acc, curr) => acc + (curr.totalVoltage || 0), 0) / networkData.length,
+      totalCurrent: networkData.reduce((acc, curr) => acc + (curr.totalCurrent || 0), 0),
+      avgSoC: networkData.reduce((acc, curr) => acc + (curr.stateOfCharge || 0), 0) / networkData.length,
       deviceCount: networkData.length,
-      totalPower: networkData.reduce((acc, curr) => acc + (curr.totalVoltage * curr.totalCurrent), 0)
+      totalPower: networkData.reduce((acc, curr) => acc + ((curr.totalVoltage || 0) * (curr.totalCurrent || 0)), 0)
     };
   };
 
+  // Формуємо фінальний об'єкт даних для відображення
+  const allData: Record<string, BatteryData> = isDemoMode ? demoData : { ...directData };
+  if (!isDemoMode && fbDevices) {
+    fbDevices.forEach(d => {
+      allData[d.id] = d as BatteryData;
+    });
+  }
+
   return {
-    devices: isDemoMode ? demoDevices : (fbDevices || []),
-    allData: isDemoMode ? demoData : {},
+    devices: isDemoMode ? demoDevices : [...(fbDevices || []), ...directDevices],
+    allData,
     history: isDemoMode ? demoHistory : {},
     aggregated: getAggregatedData(),
     isDemoMode,
