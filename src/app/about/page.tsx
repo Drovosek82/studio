@@ -14,7 +14,8 @@ import {
   Zap,
   Globe,
   Database,
-  Users
+  Users,
+  Share2
 } from "lucide-react";
 
 export default function AboutPage() {
@@ -109,6 +110,16 @@ export default function AboutPage() {
               <BrainCircuit className="h-3 w-3 text-purple-500" /> Collaborative AI
             </div>
           </div>
+        </section>
+
+        <section className="p-8 bg-accent/5 rounded-2xl border border-accent/20 space-y-4">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <Share2 className="h-5 w-5 text-accent" />
+            Як поділитися з друзями?
+          </h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Після того, як ви розгорнете проект через <b>Firebase App Hosting</b>, ви отримаєте постійне посилання. Ви можете надіслати його будь-якому тестувальнику. Кожен, хто зайде за посиланням, зможе підключити свою BMS, а ви побачите нові моделі в загальній базі знань.
+          </p>
         </section>
 
         <div className="flex justify-center">
