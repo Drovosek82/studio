@@ -11,7 +11,8 @@ import { z } from 'genkit';
 
 const GenerateEsp32FirmwareInputSchema = z.object({
   mode: z.enum(['bridge', 'display']).default('bridge').describe('Operation mode of the ESP32 device.'),
-  displayType: z.enum(['none', 'ssd1306', 'sh1106', 'lcd1602']).default('none').describe('Type of display connected to the ESP32.'),
+  displayType: z.enum(['none', 'ssd1306', 'sh1106', 'lcd1602', 'custom']).default('none').describe('Type of display connected to the ESP32.'),
+  customDisplayDescription: z.string().optional().describe('Description of a non-standard display if "custom" is selected.'),
   ssid: z.string().describe('The Wi-Fi network SSID.'),
   password: z.string().describe('The Wi-Fi network password.'),
   deviceId: z.string().describe('A unique identifier for the ESP32 device.'),
@@ -38,6 +39,9 @@ const generateFirmwarePrompt = ai.definePrompt({
 
 MODE: {{{mode}}}
 DISPLAY: {{{displayType}}}
+{{#if (eq displayType "custom")}}
+CUSTOM DISPLAY INFO: {{{customDisplayDescription}}}
+{{/if}}
 
 {{#if (eq mode "bridge")}}
 GOAL: Act as a gateway between JBD BMS and Cloud.
@@ -46,26 +50,26 @@ GOAL: Act as a gateway between JBD BMS and Cloud.
 3. Every 10s, read data (0x03 command) and POST JSON to "{{{serverUrl}}}".
 4. Handle radio coexistence for {{{espModel}}}.
 {{#if (neq displayType "none")}}
-5. Also display current Voltage, Current and SoC on the {{{displayType}}} screen.
+5. Also display current Voltage, Current and SoC on the display.
 {{/if}}
 {{else}}
 GOAL: Act as a Remote Dashboard Screen for all batteries.
 1. Connect to Wi-Fi "{{{ssid}}}" / "{{{password}}}".
 2. Every 5s, perform an HTTP GET request to "{{{serverUrl}}}".
 3. Expect a JSON response with: totalVoltage, totalCurrent, totalPower, and avgSoC.
-4. Output the data to the Serial monitor.
+4. Output the data to the Serial monitor and display.
 {{/if}}
 
 {{#if (neq displayType "none")}}
 UI SETUP:
 {{#if (eq displayType "ssd1306")}}
 - Use Adafruit_SSD1306 library for 128x64 I2C OLED display. Use default SDA/SCL.
-{{/if}}
-{{#if (eq displayType "sh1106")}}
+{{else if (eq displayType "sh1106")}}
 - Use U8g2 library (U8G2_SH1106_128X64_NONAME_F_HW_I2C) for 1.3" OLED.
-{{/if}}
-{{#if (eq displayType "lcd1602")}}
+{{else if (eq displayType "lcd1602")}}
 - Use LiquidCrystal_I2C library for 16x2 character LCD at address 0x27.
+{{else if (eq displayType "custom")}}
+- Use appropriate libraries for the custom display: {{{customDisplayDescription}}}.
 {{/if}}
 {{/if}}
 

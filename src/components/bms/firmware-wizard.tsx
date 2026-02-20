@@ -16,6 +16,7 @@ export function FirmwareWizard() {
   const { user } = useUser();
   const [mode, setMode] = useState<'bridge' | 'display'>('bridge');
   const [displayType, setDisplayType] = useState<string>("none");
+  const [customDisplayDescription, setCustomDisplayDescription] = useState("");
   const [ssid, setSsid] = useState("");
   const [password, setPassword] = useState("");
   const [deviceId, setDeviceId] = useState("");
@@ -40,6 +41,15 @@ export function FirmwareWizard() {
       return;
     }
 
+    if (displayType === 'custom' && !customDisplayDescription) {
+      toast({
+        title: "Помилка",
+        description: "Будь ласка, опишіть ваш дисплей",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!user) {
       toast({
         title: "Помилка авторизації",
@@ -58,6 +68,7 @@ export function FirmwareWizard() {
       const result = await generateEsp32Firmware({ 
         mode,
         displayType: displayType as any,
+        customDisplayDescription: displayType === 'custom' ? customDisplayDescription : undefined,
         ssid, 
         password, 
         deviceId,
@@ -68,7 +79,7 @@ export function FirmwareWizard() {
       setFirmware(result.firmwareContent);
       toast({
         title: "Прошивку створено",
-        description: `Режим: ${mode === 'bridge' ? 'Міст' : 'Екран'}. Дисплей: ${displayType.toUpperCase()}.`,
+        description: `Режим: ${mode === 'bridge' ? 'Міст' : 'Екран'}. Дисплей налаштовано.`,
       });
     } catch (error) {
       toast({
@@ -144,9 +155,26 @@ export function FirmwareWizard() {
                 <SelectItem value="ssd1306">OLED 0.96" (SSD1306)</SelectItem>
                 <SelectItem value="sh1106">OLED 1.3" (SH1106)</SelectItem>
                 <SelectItem value="lcd1602">LCD 1602 (I2C)</SelectItem>
+                <SelectItem value="custom">Інший (Описати AI)</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {displayType === 'custom' && (
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="customDisplay" className="flex items-center gap-2 text-accent">
+                <Code className="h-4 w-4" /> Опис дисплея
+              </Label>
+              <Input 
+                id="customDisplay" 
+                placeholder="Напр. OLED 1.54 SPI, E-Ink Waveshare 2.13..." 
+                value={customDisplayDescription} 
+                onChange={(e) => setCustomDisplayDescription(e.target.value)}
+                className="bg-secondary/50 border-accent/20 border"
+              />
+              <p className="text-[10px] text-muted-foreground">AI спробує підібрати бібліотеку та ініціалізацію для цього пристрою.</p>
+            </div>
+          )}
 
           {mode === 'bridge' && (
             <div className="space-y-2">
