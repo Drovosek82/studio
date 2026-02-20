@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -18,7 +17,6 @@ import {
   Bluetooth, 
   LayoutDashboard, 
   CircleDot,
-  Battery,
   ChevronRight,
   MonitorPlay,
   Cpu,

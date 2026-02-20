@@ -6,18 +6,13 @@ import {
   Cpu, 
   Wifi, 
   Shield, 
-  Code, 
   Loader2, 
-  Globe, 
-  User, 
-  Bluetooth, 
   Layers, 
   Monitor, 
   Radio, 
   Tv, 
   AlertTriangle, 
   Server, 
-  Database, 
   Share2,
   Search
 } from "lucide-react";
@@ -55,13 +50,17 @@ export function FirmwareWizard() {
 
   const { toast } = useToast();
 
-  // Автоматично підставляємо IP Хаба, якщо він відомий системі
+  // Синхронізація з глобальним IP Хаба
   useEffect(() => {
-    if (globalLocalHubIp && !localHubIp) {
+    if (globalLocalHubIp && (mode === 'bridge' || mode === 'display')) {
       setLocalHubIp(globalLocalHubIp);
       setUseLocalHub(true);
+    } else if (mode === 'hub') {
+      // Для самого Хаба IP не потрібен (він сам і є сервер)
+      setUseLocalHub(false);
+      setLocalHubIp("");
     }
-  }, [globalLocalHubIp]);
+  }, [globalLocalHubIp, mode]);
 
   useEffect(() => {
     const randomId = Math.random().toString(36).substr(2, 4).toUpperCase();
