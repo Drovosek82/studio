@@ -131,24 +131,22 @@ export function FirmwareWizard() {
             </Select>
           </div>
 
-          {mode === 'display' && (
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Tv className="h-4 w-4" /> Тип дисплея
-              </Label>
-              <Select value={displayType} onValueChange={setDisplayType}>
-                <SelectTrigger className="bg-secondary/50 border-none">
-                  <SelectValue placeholder="Оберіть дисплей" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Тільки Serial (Без екрана)</SelectItem>
-                  <SelectItem value="ssd1306">OLED 0.96" (SSD1306)</SelectItem>
-                  <SelectItem value="sh1106">OLED 1.3" (SH1106)</SelectItem>
-                  <SelectItem value="lcd1602">LCD 1602 (I2C)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Tv className="h-4 w-4" /> Тип дисплея
+            </Label>
+            <Select value={displayType} onValueChange={setDisplayType}>
+              <SelectTrigger className="bg-secondary/50 border-none">
+                <SelectValue placeholder="Оберіть дисплей" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Тільки Serial (Без екрана)</SelectItem>
+                <SelectItem value="ssd1306">OLED 0.96" (SSD1306)</SelectItem>
+                <SelectItem value="sh1106">OLED 1.3" (SH1106)</SelectItem>
+                <SelectItem value="lcd1602">LCD 1602 (I2C)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {mode === 'bridge' && (
             <div className="space-y-2">
@@ -200,7 +198,7 @@ export function FirmwareWizard() {
           </h4>
           <p className="text-[10px] text-muted-foreground leading-relaxed">
             {mode === 'bridge' 
-              ? "Пристрій з'єднається з BMS по Bluetooth і відправлятиме дані в хмару кожні 10 секунд. Оптимізовано для обраної моделі чіпа."
+              ? `Пристрій з'єднається з BMS по Bluetooth і відправлятиме дані в хмару кожні 10 секунд. ${displayType !== 'none' ? 'Дані також виводитимуться на локальний екран.' : ''}`
               : `Пристрій буде отримувати агреговані дані всієї системи через Wi-Fi та виводити їх на ${displayType === 'none' ? 'Serial порт' : 'обраний дисплей'}.`}
           </p>
         </div>

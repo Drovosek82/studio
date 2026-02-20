@@ -45,25 +45,32 @@ GOAL: Act as a gateway between JBD BMS and Cloud.
 2. Connect to BMS "{{{bmsIdentifier}}}" via BLE.
 3. Every 10s, read data (0x03 command) and POST JSON to "{{{serverUrl}}}".
 4. Handle radio coexistence for {{{espModel}}}.
+{{#if (neq displayType "none")}}
+5. Also display current Voltage, Current and SoC on the {{{displayType}}} screen.
+{{/if}}
 {{else}}
-GOAL: Act as a Remote Dashboard Screen.
+GOAL: Act as a Remote Dashboard Screen for all batteries.
 1. Connect to Wi-Fi "{{{ssid}}}" / "{{{password}}}".
 2. Every 5s, perform an HTTP GET request to "{{{serverUrl}}}".
 3. Expect a JSON response with: totalVoltage, totalCurrent, totalPower, and avgSoC.
 4. Output the data to the Serial monitor.
+{{/if}}
+
+{{#if (neq displayType "none")}}
+UI SETUP:
 {{#if (eq displayType "ssd1306")}}
-5. Use Adafruit_SSD1306 library for 128x64 I2C OLED display. Use default SDA/SCL.
+- Use Adafruit_SSD1306 library for 128x64 I2C OLED display. Use default SDA/SCL.
 {{/if}}
 {{#if (eq displayType "sh1106")}}
-5. Use U8g2 library (U8G2_SH1106_128X64_NONAME_F_HW_I2C) for 1.3" OLED.
+- Use U8g2 library (U8G2_SH1106_128X64_NONAME_F_HW_I2C) for 1.3" OLED.
 {{/if}}
 {{#if (eq displayType "lcd1602")}}
-5. Use LiquidCrystal_I2C library for 16x2 character LCD at address 0x27.
+- Use LiquidCrystal_I2C library for 16x2 character LCD at address 0x27.
 {{/if}}
 {{/if}}
 
 Requirements:
-- Use standard Arduino libraries (WiFi, HTTPClient, ArduinoJson).
+- Use standard Arduino libraries (WiFi, HTTPClient, ArduinoJson, and display-specific libs).
 - Include robust reconnect logic.
 - Output ONLY raw .ino code.`,
 });
