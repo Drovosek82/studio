@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -7,7 +8,9 @@ import { FirmwareWizard } from "@/components/bms/firmware-wizard";
 import { BluetoothConnector } from "@/components/bms/bluetooth-connector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { 
   Activity, 
   Settings, 
@@ -16,11 +19,12 @@ import {
   CircleDot,
   Battery,
   ChevronRight,
-  Zap
+  Zap,
+  MonitorPlay
 } from "lucide-react";
 
 export default function Home() {
-  const { aggregated, devices, allData, isDemoMode } = useBmsStore();
+  const { aggregated, devices, allData, isDemoMode, setDemoMode } = useBmsStore();
 
   return (
     <main className="min-h-screen bg-background text-foreground pb-12">
@@ -150,6 +154,32 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6 max-w-4xl mx-auto">
+            <Card className="glass-card border-none">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <MonitorPlay className="h-5 w-5 text-accent" />
+                  <CardTitle>Симуляція системи</CardTitle>
+                </div>
+                <CardDescription>
+                  Керуйте режимом демонстрації для тестування інтерфейсу
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg border border-border/50">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">Демо-режим</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Автоматична генерація випадкових даних для візуалізації
+                    </p>
+                  </div>
+                  <Switch 
+                    checked={isDemoMode} 
+                    onCheckedChange={setDemoMode}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            
             <FirmwareWizard />
           </TabsContent>
         </Tabs>

@@ -11,13 +11,19 @@ let globalDevices: BatteryDevice[] = [
 
 let globalRealTimeData: Record<string, BatteryData> = {};
 let globalHistory: Record<string, HistoricalRecord[]> = {};
+let globalIsDemoMode = true;
 
 export function useBmsStore() {
   const [devices, setDevices] = useState<BatteryDevice[]>(globalDevices);
   const [activeDeviceId, setActiveDeviceId] = useState<string>('BMS_01');
   const [realTimeData, setRealTimeData] = useState<Record<string, BatteryData>>(globalRealTimeData);
   const [history, setHistory] = useState<Record<string, HistoricalRecord[]>>(globalHistory);
-  const [isDemoMode, setIsDemoMode] = useState(true);
+  const [isDemoMode, setIsDemoModeState] = useState(globalIsDemoMode);
+
+  const setDemoMode = (val: boolean) => {
+    globalIsDemoMode = val;
+    setIsDemoModeState(val);
+  };
 
   useEffect(() => {
     if (isDemoMode && Object.keys(globalRealTimeData).length === 0) {
@@ -200,6 +206,7 @@ export function useBmsStore() {
     history,
     aggregated: getAggregatedData(),
     isDemoMode,
+    setDemoMode,
     updateEeprom,
     toggleControl,
     setBalancingMode
