@@ -5,12 +5,15 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
 
+    // Приватні дані пристроїв - доступ тільки власнику
     match /users/{userId}/bmsDevices/{deviceId} {
       allow read, write: if isOwner(userId);
     }
     
-    match /users/{userId}/modelInsights/{insightId} {
-      allow read, write: if isOwner(userId);
+    // Глобальна база знань ШІ - читання та запис для всіх авторизованих користувачів
+    // Це дозволяє ШІ "вчитися" на досвіді всієї спільноти
+    match /modelInsights/{insightId} {
+      allow read, write: if isSignedIn();
     }
     
     match /{document=**} {

@@ -55,15 +55,15 @@
         "definition": {
           "entityName": "BMSDevice",
           "schema": { "$ref": "#/backend/entities/BMSDevice" },
-          "description": "Користувацькі пристрої BMS."
+          "description": "Користувацькі пристрої BMS (Приватні)."
         }
       },
       {
-        "path": "/users/{userId}/modelInsights/{insightId}",
+        "path": "/modelInsights/{insightId}",
         "definition": {
           "entityName": "BmsModelInsight",
           "schema": { "$ref": "#/backend/entities/BmsModelInsight" },
-          "description": "База знань ШІ про моделі, з якими працював користувач."
+          "description": "Глобальна база знань ШІ про моделі (Спільна)."
         }
       }
     ]

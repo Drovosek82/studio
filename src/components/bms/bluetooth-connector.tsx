@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -29,7 +30,8 @@ export function BluetoothConnector() {
     try {
       const identification = await identifyBmsModel({ deviceName });
       const insightId = identification.modelName.replace(/\s+/g, '_').toLowerCase();
-      const insightRef = doc(db, 'users', user.uid, 'modelInsights', insightId);
+      // Зберігаємо в глобальну колекцію для обміну досвідом ШІ
+      const insightRef = doc(db, 'modelInsights', insightId);
       
       const docSnap = await getDoc(insightRef);
       if (docSnap.exists()) {

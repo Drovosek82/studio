@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useMemo } from "react";
-import { BrainCircuit, BookOpen, Activity, History, ShieldCheck, Zap } from "lucide-react";
+import { BrainCircuit, BookOpen, Activity, History, ShieldCheck, Zap, Globe } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -13,9 +14,10 @@ export function AiKnowledgeBase() {
   const { user } = useUser();
   const db = useFirestore();
 
+  // Тепер запитуємо глобальну колекцію для обміну знаннями між користувачами
   const insightsRef = useMemoFirebase(() => 
-    user && db ? query(collection(db, 'users', user.uid, 'modelInsights'), orderBy('lastSeen', 'desc'), limit(10)) : null,
-  [user, db]);
+    db ? query(collection(db, 'modelInsights'), orderBy('lastSeen', 'desc'), limit(50)) : null,
+  [db]);
   
   const { data: insights, isLoading } = useCollection<any>(insightsRef);
 
@@ -23,11 +25,11 @@ export function AiKnowledgeBase() {
     <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-500">
       <div className="flex flex-col items-center text-center mb-8">
         <div className="p-4 bg-accent/20 rounded-full text-accent mb-4">
-          <BrainCircuit className="h-10 w-10" />
+          <Globe className="h-10 w-10" />
         </div>
         <h2 className="text-2xl font-bold">{t('aiKnowledgeTitle')}</h2>
         <p className="text-muted-foreground text-sm max-w-md">
-          {t('aiKnowledgeDesc')}
+          Це спільна база знань. ШІ вчиться на підключеннях усіх користувачів, щоб краще розуміти різні моделі BMS.
         </p>
       </div>
 
@@ -87,7 +89,7 @@ export function AiKnowledgeBase() {
           <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
           <h3 className="text-lg font-bold">{t('knowledgeBaseEmpty')}</h3>
           <p className="text-xs text-muted-foreground mt-2">
-            {t('connectFirst')}
+            Будьте першим, хто додасть нову модель у спільну базу!
           </p>
         </div>
       )}

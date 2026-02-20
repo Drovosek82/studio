@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -54,9 +55,10 @@ export function FirmwareWizard() {
 
   const { toast } = useToast();
 
+  // Завантажуємо моделі з Глобальної бази знань ШІ
   const insightsRef = useMemoFirebase(() => 
-    user && db ? query(collection(db, 'users', user.uid, 'modelInsights'), orderBy('modelName', 'asc')) : null,
-  [user, db]);
+    db ? query(collection(db, 'modelInsights'), orderBy('modelName', 'asc')) : null,
+  [db]);
   
   const { data: insights } = useCollection<any>(insightsRef);
 
@@ -312,7 +314,7 @@ export function FirmwareWizard() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-[10px] text-muted-foreground">{t('aiWillFillSettings')}</p>
+                  <p className="text-[10px] text-muted-foreground">Використовуйте спільну базу знань ШІ для налаштування.</p>
                 </div>
               )}
 
