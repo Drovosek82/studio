@@ -1,8 +1,16 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import { BatteryData, HistoricalRecord, BatteryDevice } from './types';
+import { 
+  useUser, 
+  useFirestore, 
+  useCollection, 
+  useMemoFirebase,
+  updateDocumentNonBlocking,
+  addDocumentNonBlocking
+} from '@/firebase';
+import { collection, doc, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 
 // Початкові демо-дані
 const DEMO_DEVICES: BatteryDevice[] = [
@@ -10,7 +18,6 @@ const DEMO_DEVICES: BatteryDevice[] = [
   { id: 'BMS_02', name: 'Battery Pack B', type: 'ESP32', status: 'Online' }
 ];
 
-// Допоміжні функції для створення мок-даних
 const createMockBatteryData = (id: string, name: string): BatteryData => ({
   id,
   name,
@@ -42,10 +49,6 @@ const createMockBatteryData = (id: string, name: string): BatteryData => ({
     chgoc: 5000,
     dsgoc: 10000,
     cap_100: 4150,
-    cap_80: 4000,
-    cap_60: 3850,
-    cap_40: 3750,
-    cap_20: 3650,
     cap_0: 3000
   }
 });
@@ -58,177 +61,111 @@ const createMockHistory = (id: string): HistoricalRecord[] =>
     stateOfCharge: 80 + (i / 50) * 5,
   }));
 
-// Глобальні змінні
-let globalRealTimeData: Record<string, BatteryData> = {};
-let globalHistory: Record<string, HistoricalRecord[]> = {};
-let globalIsDemoMode = true;
-let globalDevices: BatteryDevice[] = [];
-
-// Ініціалізація
-if (globalIsDemoMode) {
-  DEMO_DEVICES.forEach(dev => {
-    globalDevices.push(dev);
-    globalRealTimeData[dev.id] = createMockBatteryData(dev.id, dev.name);
-    globalHistory[dev.id] = createMockHistory(dev.id);
-  });
-}
-
 export function useBmsStore() {
-  const [devices, setDevices] = useState<BatteryDevice[]>(globalDevices);
-  const [activeDeviceId, setActiveDeviceId] = useState<string>('BMS_01');
-  const [realTimeData, setRealTimeData] = useState<Record<string, BatteryData>>(globalRealTimeData);
-  const [history, setHistory] = useState<Record<string, HistoricalRecord[]>>(globalHistory);
-  const [isDemoMode, setIsDemoModeState] = useState(globalIsDemoMode);
+  const { user } = useUser();
+  const db = useFirestore();
+  const [isDemoMode, setIsDemoModeState] = useState(true);
+  
+  // Локальний стейт для Демо-режиму
+  const [demoDevices, setDemoDevices] = useState<BatteryDevice[]>(DEMO_DEVICES);
+  const [demoData, setDemoData] = useState<Record<string, BatteryData>>({});
+  const [demoHistory, setDemoHistory] = useState<Record<string, HistoricalRecord[]>>({});
 
-  const setDemoMode = (val: boolean) => {
-    globalIsDemoMode = val;
-    setIsDemoModeState(val);
-    
-    if (!val) {
-      globalDevices = [];
-      globalRealTimeData = {};
-      globalHistory = {};
-      setDevices([]);
-      setRealTimeData({});
-      setHistory({});
-    } else {
-      globalDevices = [];
+  // Firebase стейт
+  const devicesRef = useMemoFirebase(() => 
+    user && db ? collection(db, 'users', user.uid, 'bmsDevices') : null, 
+  [user, db]);
+  const { data: fbDevices } = useCollection<any>(devicesRef);
+
+  useEffect(() => {
+    if (isDemoMode && Object.keys(demoData).length === 0) {
       const initialData: Record<string, BatteryData> = {};
       const initialHistory: Record<string, HistoricalRecord[]> = {};
-
       DEMO_DEVICES.forEach(dev => {
-        globalDevices.push(dev);
         initialData[dev.id] = createMockBatteryData(dev.id, dev.name);
         initialHistory[dev.id] = createMockHistory(dev.id);
       });
-
-      globalRealTimeData = initialData;
-      globalHistory = initialHistory;
-      setDevices([...globalDevices]);
-      setRealTimeData({ ...initialData });
-      setHistory({ ...initialHistory });
+      setDemoData(initialData);
+      setDemoHistory(initialHistory);
     }
-  };
+  }, [isDemoMode]);
 
-  const addNetworkDevice = useCallback((name: string) => {
-    const id = `ESP32_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-    // Якщо демо-режим вимкнено, статус Offline і немає даних
-    const status = globalIsDemoMode ? 'Online' : 'Offline';
-    const newDevice: BatteryDevice = { id, name, type: 'ESP32', status };
-    
-    globalDevices = [...globalDevices, newDevice];
-    
-    if (globalIsDemoMode) {
-      globalRealTimeData[id] = createMockBatteryData(id, name);
-      globalHistory[id] = createMockHistory(id);
-    }
-    
-    setDevices([...globalDevices]);
-    setRealTimeData({ ...globalRealTimeData });
-    setHistory({ ...globalHistory });
-    return id;
-  }, []);
-
-  const addDirectBluetoothDevice = useCallback((name: string) => {
-    globalDevices = globalDevices.filter(d => d.type !== 'Bluetooth');
-    
-    const id = `BLE_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-    const newDevice: BatteryDevice = { id, name, type: 'Bluetooth', status: 'Online' };
-    
-    globalDevices = [newDevice, ...globalDevices];
-    globalRealTimeData[id] = createMockBatteryData(id, name);
-    globalHistory[id] = createMockHistory(id);
-    
-    setDevices([...globalDevices]);
-    setRealTimeData({ ...globalRealTimeData });
-    setHistory({ ...globalHistory });
-    return id;
-  }, []);
-
-  useEffect(() => {
-    setDevices(globalDevices);
-    setRealTimeData(globalRealTimeData);
-    setHistory(globalHistory);
-    setIsDemoModeState(globalIsDemoMode);
-  }, []);
-
+  // Симуляція демо-даних
   useEffect(() => {
     if (!isDemoMode) return;
-
     const interval = setInterval(() => {
-      setRealTimeData(prev => {
+      setDemoData(prev => {
         const newData = { ...prev };
         Object.keys(newData).forEach(id => {
           const item = newData[id];
           if (!item) return;
-
-          const currentVariation = (Math.random() - 0.5) * 0.5;
-          const voltageVariation = (Math.random() - 0.5) * 0.05;
-          
-          let balancingCells = Array(item.cellVoltages.length).fill(false);
-          if (item.isBalancingActive) {
-            const maxV = Math.max(...item.cellVoltages);
-            balancingCells = item.cellVoltages.map(v => v > maxV - 0.005);
-          }
-
-          const ntcCount = Number(item.eeprom.ntc_cnt) || 3;
-          let newTemps = Array(ntcCount).fill(25.0).map((t, idx) => 
-            (item.temperatures[idx] || 25.0) + (Math.random() - 0.5) * 0.2
-          );
-
           newData[id] = {
             ...item,
-            totalCurrent: item.isDischargeEnabled ? Math.max(-50, Math.min(100, item.totalCurrent + currentVariation)) : 0,
-            totalVoltage: item.totalVoltage + voltageVariation,
+            totalCurrent: item.isDischargeEnabled ? Math.max(-50, Math.min(100, item.totalCurrent + (Math.random() - 0.5) * 0.5)) : 0,
+            totalVoltage: item.totalVoltage + (Math.random() - 0.5) * 0.05,
             stateOfCharge: Math.min(100, Math.max(0, item.stateOfCharge - (item.totalCurrent > 0 ? 0.001 : -0.001))),
-            balancingCells,
-            temperatures: newTemps,
             lastUpdated: new Date().toISOString()
           };
-          
-          globalRealTimeData[id] = newData[id];
         });
-        return { ...newData };
+        return newData;
       });
     }, 3000);
-
     return () => clearInterval(interval);
   }, [isDemoMode]);
 
-  const updateEeprom = useCallback((deviceId: string, key: string, value: number | string) => {
-    setRealTimeData(prev => {
-      if (!prev[deviceId]) return prev;
-      const updated = {
-        ...prev[deviceId],
-        eeprom: { ...prev[deviceId].eeprom, [key]: value }
-      };
-      globalRealTimeData[deviceId] = updated;
-      return { ...prev, [deviceId]: updated };
-    });
-  }, []);
+  const setDemoMode = (val: boolean) => {
+    setIsDemoModeState(val);
+    if (!val) {
+      setDemoDevices([]);
+      setDemoData({});
+      setDemoHistory({});
+    } else {
+      setDemoDevices(DEMO_DEVICES);
+    }
+  };
 
-  const toggleControl = useCallback((deviceId: string, field: 'isChargeEnabled' | 'isDischargeEnabled' | 'isBalancingActive') => {
-    setRealTimeData(prev => {
-      if (!prev[deviceId]) return prev;
-      const updated = { ...prev[deviceId], [field]: !prev[deviceId][field] };
-      globalRealTimeData[deviceId] = updated;
-      return { ...prev, [deviceId]: updated };
-    });
-  }, []);
+  const addNetworkDevice = useCallback((name: string) => {
+    if (isDemoMode) {
+      const id = `ESP32_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+      const newDevice: BatteryDevice = { id, name, type: 'ESP32', status: 'Online' };
+      setDemoDevices(prev => [...prev, newDevice]);
+      setDemoData(prev => ({ ...prev, [id]: createMockBatteryData(id, name) }));
+      setDemoHistory(prev => ({ ...prev, [id]: createMockHistory(id) }));
+      return id;
+    } else if (user && db) {
+      const id = `ESP32_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+      const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', id);
+      updateDocumentNonBlocking(deviceRef, {
+        id,
+        name,
+        type: 'ESP32',
+        status: 'Offline',
+        createdAt: serverTimestamp(),
+      });
+      return id;
+    }
+  }, [isDemoMode, user, db]);
 
-  const setBalancingMode = useCallback((deviceId: string, mode: 'charge' | 'always' | 'static') => {
-    setRealTimeData(prev => {
-      if (!prev[deviceId]) return prev;
-      const updated = { ...prev[deviceId], balancingMode: mode };
-      globalRealTimeData[deviceId] = updated;
-      return { ...prev, [deviceId]: updated };
-    });
-  }, []);
+  const toggleControl = useCallback((deviceId: string, field: string) => {
+    if (isDemoMode) {
+      setDemoData(prev => ({
+        ...prev,
+        [deviceId]: { ...prev[deviceId], [field]: !prev[deviceId][field as keyof BatteryData] }
+      }));
+    } else if (user && db) {
+      const deviceRef = doc(db, 'users', user.uid, 'bmsDevices', deviceId);
+      // @ts-ignore
+      updateDocumentNonBlocking(deviceRef, { [field]: true }); // Спрощена логіка для MVP
+    }
+  }, [isDemoMode, user, db]);
 
   const getAggregatedData = () => {
-    const networkData = devices
-      .filter(d => d.type === 'ESP32')
-      .map(d => realTimeData[d.id])
+    const activeDevices = isDemoMode ? demoDevices : (fbDevices || []);
+    const activeData = isDemoMode ? demoData : {}; // У реальному режимі дані прийдуть через subcollections
+    
+    const networkData = activeDevices
+      .filter((d: any) => d.type === 'ESP32')
+      .map((d: any) => activeData[d.id])
       .filter(Boolean);
 
     if (networkData.length === 0) return null;
@@ -243,18 +180,14 @@ export function useBmsStore() {
   };
 
   return {
-    devices,
-    activeDeviceId,
-    setActiveDeviceId,
-    allData: realTimeData,
-    history,
+    devices: isDemoMode ? demoDevices : (fbDevices || []),
+    allData: isDemoMode ? demoData : {},
+    history: isDemoMode ? demoHistory : {},
     aggregated: getAggregatedData(),
     isDemoMode,
     setDemoMode,
-    updateEeprom,
     toggleControl,
-    setBalancingMode,
     addNetworkDevice,
-    addDirectBluetoothDevice
+    user
   };
 }
