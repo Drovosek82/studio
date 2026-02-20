@@ -10,6 +10,7 @@ const DEMO_DEVICES: BatteryDevice[] = [
   { id: 'BMS_02', name: 'Battery Pack B', type: 'ESP32', status: 'Online' }
 ];
 
+// Глобальні змінні для збереження стану між викликами хуків
 let globalRealTimeData: Record<string, BatteryData> = {};
 let globalHistory: Record<string, HistoricalRecord[]> = {};
 let globalIsDemoMode = true;
@@ -22,39 +23,7 @@ export function useBmsStore() {
   const [history, setHistory] = useState<Record<string, HistoricalRecord[]>>(globalHistory);
   const [isDemoMode, setIsDemoModeState] = useState(globalIsDemoMode);
 
-  const setDemoMode = (val: boolean) => {
-    globalIsDemoMode = val;
-    setIsDemoModeState(val);
-    
-    if (!val) {
-      globalDevices = [];
-      globalRealTimeData = {};
-      globalHistory = {};
-      setDevices([]);
-      setRealTimeData({});
-      setHistory({});
-    } else {
-      globalDevices = [...DEMO_DEVICES];
-      setDevices(globalDevices);
-      initializeDemoData();
-    }
-  };
-
-  const initializeDemoData = () => {
-    const initialData: Record<string, BatteryData> = {};
-    const initialHistory: Record<string, HistoricalRecord[]> = {};
-
-    DEMO_DEVICES.forEach(dev => {
-      initialData[dev.id] = createMockBatteryData(dev.id, dev.name);
-      initialHistory[dev.id] = createMockHistory(dev.id);
-    });
-
-    globalRealTimeData = initialData;
-    globalHistory = initialHistory;
-    setRealTimeData({ ...initialData });
-    setHistory({ ...initialHistory });
-  };
-
+  // Функція для створення мок-даних
   const createMockBatteryData = (id: string, name: string): BatteryData => ({
     id,
     name,
@@ -73,12 +42,24 @@ export function useBmsStore() {
     isBalancingActive: false,
     balancingMode: 'charge',
     eeprom: {
-      design_cap: 10000,
+      design_cap: 100000, // 100Ah in 10mAh
       ntc_cnt: 3,
       cell_cnt: 14,
       bal_start: 3400,
       bal_window: 50,
-      shunt_res: 100
+      shunt_res: 100,
+      covp: 4200,
+      covp_rel: 4100,
+      cuvp: 3000,
+      cuvp_rel: 3200,
+      chgoc: 5000,
+      dsgoc: 10000,
+      cap_100: 4150,
+      cap_80: 4000,
+      cap_60: 3850,
+      cap_40: 3750,
+      cap_20: 3650,
+      cap_0: 3000
     }
   });
 
@@ -89,6 +70,37 @@ export function useBmsStore() {
       totalCurrent: 1.0 + Math.random() * 5,
       stateOfCharge: 80 + (i / 50) * 5,
     }));
+
+  const setDemoMode = (val: boolean) => {
+    globalIsDemoMode = val;
+    setIsDemoModeState(val);
+    
+    if (!val) {
+      // Повне очищення абсолютно всіх пристроїв та даних
+      globalDevices = [];
+      globalRealTimeData = {};
+      globalHistory = {};
+      setDevices([]);
+      setRealTimeData({});
+      setHistory({});
+    } else {
+      // Відновлення демо-стану
+      globalDevices = [...DEMO_DEVICES];
+      const initialData: Record<string, BatteryData> = {};
+      const initialHistory: Record<string, HistoricalRecord[]> = {};
+
+      DEMO_DEVICES.forEach(dev => {
+        initialData[dev.id] = createMockBatteryData(dev.id, dev.name);
+        initialHistory[dev.id] = createMockHistory(dev.id);
+      });
+
+      globalRealTimeData = initialData;
+      globalHistory = initialHistory;
+      setDevices(globalDevices);
+      setRealTimeData({ ...initialData });
+      setHistory({ ...initialHistory });
+    }
+  };
 
   const addNetworkDevice = useCallback((name: string) => {
     const id = `ESP32_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
@@ -105,7 +117,7 @@ export function useBmsStore() {
   }, []);
 
   const addDirectBluetoothDevice = useCallback((name: string) => {
-    // Видаляємо попередні Direct Bluetooth підключення, бо воно може бути лише одне
+    // Видаляємо попередні Direct Bluetooth підключення
     globalDevices = globalDevices.filter(d => d.type !== 'Bluetooth');
     
     const id = `BLE_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
@@ -121,12 +133,15 @@ export function useBmsStore() {
     return id;
   }, []);
 
+  // Синхронізація локального стану з глобальними змінними при монті
   useEffect(() => {
-    if (isDemoMode && Object.keys(globalRealTimeData).length === 0) {
-      initializeDemoData();
-    }
-  }, [isDemoMode]);
+    setDevices(globalDevices);
+    setRealTimeData(globalRealTimeData);
+    setHistory(globalHistory);
+    setIsDemoModeState(globalIsDemoMode);
+  }, []);
 
+  // Інтервал для оновлення даних у демо-режимі
   useEffect(() => {
     if (!isDemoMode) return;
 
@@ -163,7 +178,7 @@ export function useBmsStore() {
           
           globalRealTimeData[id] = newData[id];
         });
-        return newData;
+        return { ...newData };
       });
     }, 3000);
 
@@ -201,7 +216,6 @@ export function useBmsStore() {
   }, []);
 
   const getAggregatedData = () => {
-    // Агрегуємо тільки ESP32 пристрої
     const networkData = devices
       .filter(d => d.type === 'ESP32')
       .map(d => realTimeData[d.id])
