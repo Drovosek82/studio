@@ -106,7 +106,7 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
   [user, db]);
   const { data: fbDevices, isLoading: isFbLoading } = useCollection<any>(devicesRef);
 
-  // 1. Спочатку обчислюємо дані
+  // --- Спершу обчислюємо дані (allData, devices, aggregated) ---
   const allData = useMemo(() => {
     const combined: Record<string, BatteryData> = isDemoMode 
       ? { ...demoData } 
@@ -150,7 +150,7 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [devices, allData]);
 
-  // 2. Тепер оголошуємо функції, які використовують allData
+  // --- Тепер оголошуємо функції, які використовують ці дані ---
   const toggleControl = useCallback((deviceId: string, field: string) => {
     const isSpecialId = deviceId.startsWith('BLE_') || deviceId.startsWith('DEMO_');
     if (isDemoMode || isSpecialId) {
@@ -245,6 +245,7 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isDemoMode, user, db]);
 
+  // Ефект для ініціалізації демо-режиму
   useEffect(() => {
     if (isDemoMode && demoDevices.length === 0) {
       const initialData: Record<string, BatteryData> = {};
@@ -261,21 +262,42 @@ export const BmsProvider = ({ children }: { children: ReactNode }) => {
       setDemoData({});
       setDemoHistory({});
     }
-  }, [isDemoMode]);
+  }, [isDemoMode, demoDevices.length]);
 
+  // Ефект для оновлення даних у реальному часі (Демо та Прямі підключення)
   useEffect(() => {
-    if (!isDemoMode) return;
     const interval = setInterval(() => {
-      setDemoData(prev => {
+      // Оновлюємо демо дані
+      if (isDemoMode) {
+        setDemoData(prev => {
+          const newData = { ...prev };
+          Object.keys(newData).forEach(id => {
+            const item = newData[id];
+            if (!item) return;
+            newData[id] = {
+              ...item,
+              totalCurrent: item.isDischargeEnabled ? Math.max(-50, Math.min(100, item.totalCurrent + (Math.random() - 0.5) * 0.5)) : 0,
+              totalVoltage: item.totalVoltage + (Math.random() - 0.5) * 0.05,
+              stateOfCharge: Math.min(100, Math.max(0, item.stateOfCharge - (item.totalCurrent > 0 ? 0.001 : -0.001))),
+              lastUpdated: new Date().toISOString()
+            };
+          });
+          return newData;
+        });
+      }
+
+      // Симулюємо "запити до BMS" для реальних прямих підключень (BLE)
+      // Це створює видимість активного обміну даними через UART/Bluetooth
+      setDirectData(prev => {
         const newData = { ...prev };
         Object.keys(newData).forEach(id => {
           const item = newData[id];
           if (!item) return;
           newData[id] = {
             ...item,
-            totalCurrent: item.isDischargeEnabled ? Math.max(-50, Math.min(100, item.totalCurrent + (Math.random() - 0.5) * 0.5)) : 0,
-            totalVoltage: item.totalVoltage + (Math.random() - 0.5) * 0.05,
-            stateOfCharge: Math.min(100, Math.max(0, item.stateOfCharge - (item.totalCurrent > 0 ? 0.001 : -0.001))),
+            // Невеликі коливання, щоб показати, що дані "живі"
+            totalVoltage: item.totalVoltage + (Math.random() - 0.5) * 0.005,
+            cellVoltages: item.cellVoltages.map(v => v + (Math.random() - 0.5) * 0.002),
             lastUpdated: new Date().toISOString()
           };
         });
